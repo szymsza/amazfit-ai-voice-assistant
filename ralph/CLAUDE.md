@@ -13,7 +13,8 @@ You are an autonomous coding agent working on a software project.
 7. Update CLAUDE.md files if you discover reusable patterns (see below)
 8. Update the PRD to set `passes: true` for the completed story
 9. If checks pass, commit ALL changes (including updated PRD and progress.txt) with message: `feat: [Story ID] - [Story Title]`
-10. Append your progress to `progress.txt`
+10. Push the commit to remote: `git push`
+11. Append your progress to `progress.txt`
 
 ## Progress Report Format
 
