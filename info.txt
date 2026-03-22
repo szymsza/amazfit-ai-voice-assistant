@@ -2,7 +2,7 @@ Amazfit Voice Assistant
 =======================
 
 Voice AI assistant for Amazfit Balance running on Zepp OS.
-Ask questions by voice, get spoken answers from Claude or ChatGPT.
+Ask questions by voice, get spoken answers from Claude, ChatGPT, or Groq.
 
 Architecture
 ------------
@@ -16,8 +16,8 @@ How it works:
   1. Watch: user presses button, records voice (OPUS via Recorder API)
   2. Watch -> Phone: audio sent over BLE to Side Service (runs inside Zepp companion app)
   3. Phone -> Server: Side Service makes single fetch() POST with audio bytes
-  4. Server pipeline: STT (Groq Whisper) -> LLM (Claude or ChatGPT) -> TTS (OpenAI TTS)
-  5. Server -> Phone: returns audio response (MP3/OPUS)
+  4. Server pipeline: STT (Groq Whisper) -> LLM (Claude/ChatGPT/Groq) -> TTS (Groq Orpheus + ffmpeg WAV->OPUS)
+  5. Server -> Phone: returns audio response (OPUS)
   6. Phone -> Watch: audio transferred back over BLE
   7. Watch: plays response via Player API
 
@@ -25,7 +25,7 @@ No separate Android app needed - Side Service runs inside the Zepp companion app
 
 Key APIs used (watch side):
   - Recorder API (OPUS) for voice capture
-  - Player API (MP3/OPUS) for audio playback
+  - Player API (OPUS) for audio playback
   - Messaging/TransferFile API for watch <-> phone BLE communication
   - Fetch API (Side Service) for HTTP requests to our server
 
@@ -40,8 +40,35 @@ Easy Media Library:           https://github.com/silver-zepp/zeppos-easy-media
 Zepp OS Device List:          https://docs.zepp.com/docs/reference/related-resources/device-list/
 
 Claude API:                   https://docs.anthropic.com/en/docs
-OpenAI API (GPT + TTS):      https://platform.openai.com/docs
-Groq API (Whisper STT):       https://console.groq.com/docs
+OpenAI API (GPT):             https://platform.openai.com/docs
+Groq API (STT + TTS + LLM):  https://console.groq.com/docs
+
+Groq API Details
+----------------
+All Groq endpoints use: https://api.groq.com/openai/v1/
+Auth header: Authorization: Bearer $GROQ_API_KEY
+
+STT (Speech-to-Text):
+  Endpoint: POST /audio/transcriptions
+  Model: whisper-large-v3
+  Input: multipart form with audio file + model field
+  Tested roundtrip: ~0.44s
+
+TTS (Text-to-Speech):
+  Endpoint: POST /audio/speech
+  Model: canopylabs/orpheus-v1-english
+  Voices: austin, troy, hannah (and others)
+  Output format: WAV only (16-bit PCM mono 24kHz)
+  Requires server-side ffmpeg conversion: WAV -> OPUS (~260ms, 211KB -> 12KB)
+  Supports vocal directions in input text: [cheerful], etc.
+  Tested roundtrip: ~0.87s + ~0.26s conversion = ~1.13s total
+
+LLM (Chat Completions):
+  Endpoint: POST /chat/completions
+  Default model: moonshotai/kimi-k2-instruct (0.42s, knowledge cutoff ~June 2025)
+  Other models: llama-3.3-70b-versatile (0.32s), qwen/qwen3-32b, groq/compound (web search, ~10s)
+  OpenAI-compatible request format
+
 
 Plan
 ----
@@ -53,18 +80,22 @@ Plan
  6. Deploy a basic echo server (accepts audio POST, returns the same audio as response)
  7. Test the full round-trip: watch -> phone -> server -> phone -> watch
  8. Test on a real Amazfit Balance device
- 9. Make the server functional:
+ 9. Benchmark LLM providers (price, speed, accuracy):
+    - ChatGPT: gpt-4o-mini, gpt-4o (with and without web search)
+    - Claude: haiku 4.5, sonnet 4.6
+    - Compare against Groq kimi-k2-instruct baseline
+10. Make the server functional:
     - Groq Whisper API for speech-to-text
-    - Claude API and ChatGPT API for LLM response
-    - OpenAI TTS API for text-to-speech
-10. Improve the app UI:
+    - LLM response (default: Groq kimi-k2-instruct, options: Claude / ChatGPT)
+    - Groq Orpheus TTS for text-to-speech (WAV -> OPUS via ffmpeg)
+11. Improve the app UI:
     - Show transcribed question text on screen
     - Show AI response text on screen
     - Loading/status indicators
-11. Make the app configurable (settings page):
-    - Groq Whisper API key
-    - LLM provider selection (Claude / ChatGPT / Groq)
-    - LLM API key
+12. Make the app configurable (settings page):
+    - Groq API key (for STT + TTS, and optionally LLM)
+    - LLM provider selection (default: Groq kimi-k2-instruct, options: Claude / ChatGPT)
+    - LLM API key (Claude or OpenAI key, if not using Groq for LLM)
     - Model selection
-    - TTS provider/voice selection
-12. Polish and release
+    - TTS voice selection (austin, troy, hannah, etc.)
+13. Polish and release
