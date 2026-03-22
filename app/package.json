@@ -5,9 +5,10 @@
   "main": "app.js",
   "scripts": {
     "typecheck": "tsc --noEmit --project tsconfig.json",
-    "dev": "zeus dev",
-    "build": "zeus build",
-    "preview": "zeus preview"
+    "compile": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json && zeus dev",
+    "build": "tsc --project tsconfig.json && zeus build",
+    "preview": "tsc --project tsconfig.json && zeus preview"
   },
   "author": "",
   "license": "ISC",

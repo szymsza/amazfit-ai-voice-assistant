@@ -6,7 +6,6 @@ import { openSync, readSync, writeSync, closeSync, statSync, O_RDONLY, O_RDWR, O
 import {
   RING_STYLE,
   BTN_STYLE,
-  CLICK_AREA_STYLE,
   STATE_TEXT_STYLE,
 } from 'zosLoader:./index.page.[pf].layout.js'
 
@@ -44,8 +43,6 @@ const RESPONSE_PATH = 'data://response.opus'
 const RECORDING_FILE = 'recording.opus'
 const RESPONSE_FILE = 'response.opus'
 
-// CLICK_AREA is a valid Zepp OS widget not yet included in @zeppos/device-types
-const zepposWidget = hmUI.widget as typeof hmUI.widget & { readonly CLICK_AREA: number }
 
 // Module-level state (Page.Option only accepts lifecycle methods + state object)
 let appState = AppState.Idle
@@ -164,10 +161,7 @@ Page({
     hmUI.createWidget(hmUI.widget.CIRCLE, RING_STYLE)
     btnWidget = hmUI.createWidget(hmUI.widget.CIRCLE, BTN_STYLE)
     stateTextWidget = hmUI.createWidget(hmUI.widget.TEXT, STATE_TEXT_STYLE)
-    hmUI.createWidget(zepposWidget.CLICK_AREA, {
-      ...CLICK_AREA_STYLE,
-      click_func: onButtonPress,
-    })
+    btnWidget.addEventListener(hmUI.event.CLICK_UP, onButtonPress)
   },
 
   onDestroy() {

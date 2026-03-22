@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "ESNext",
     "target": "es6",
     "strict": true,
     "skipLibCheck": true,
     "baseUrl": ".",
     "rootDir": ".",
-    "noEmit": true,
+    "noEmit": false,
     "typeRoots": []
   },
   "include": [

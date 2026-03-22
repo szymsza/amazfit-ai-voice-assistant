@@ -3,6 +3,7 @@ import { BaseSideService } from '@zeppos/zml/base-side'
 const SERVER_URL_KEY = 'serverUrl'
 const API_TOKEN_KEY = 'apiToken'
 const DEFAULT_SERVER_URL = 'http://localhost:3000'
+const DEFAULT_API_TOKEN = 'your_secret_token_here'
 
 AppSideService(
   BaseSideService({
@@ -16,7 +17,7 @@ AppSideService(
     onRequest(req: unknown, res: (err: unknown, data?: unknown) => void): void {
       const audioBuffer = req as ArrayBuffer
       const serverUrl = settings.settingsStorage.getItem(SERVER_URL_KEY) ?? DEFAULT_SERVER_URL
-      const apiToken = settings.settingsStorage.getItem(API_TOKEN_KEY) ?? ''
+      const apiToken = settings.settingsStorage.getItem(API_TOKEN_KEY) ?? DEFAULT_API_TOKEN
 
       fetch(`${serverUrl}/api/ask`, {
         method: 'POST',
