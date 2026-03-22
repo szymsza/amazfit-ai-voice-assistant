@@ -10,6 +10,8 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - `@zos/media` (Recorder/Player) not in device-types — declared in `app/global.d.ts`
 - zosLoader module in `global.d.ts` uses `export { ... } from './page/gt/home/index.page.r.layout'` so layout types stay in sync automatically
 - App name: "AI Voice Assistant"
+- Server uses `express.raw({ type: '*/*', limit: '10mb' })` to receive binary audio as `Buffer`
+- Server typecheck: `cd server && npm run typecheck`
 
 ---
 
@@ -39,4 +41,17 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - **Learnings for future iterations:**
   - Player API mirrors Recorder API: `prepare()` then `setSource()` then `start()`; listen for `play_end`/`play_error` to know when done
   - Both recorder and player must be stopped in `onDestroy` to avoid resource leaks
+---
+
+## 2026-03-22 - US-004
+- Created `server/` directory with Node.js/Express server in TypeScript
+- POST /api/ask echoes received audio bytes back to caller (echo server for pipeline testing)
+- Bearer token auth from `Authorization` header; returns 401 for missing/invalid token
+- Config via env vars: `PORT` (default 3000), `API_TOKEN`
+- `express.raw({ type: '*/*' })` used to receive raw binary audio as a Buffer
+- Files changed: server/package.json, server/tsconfig.json, server/src/index.ts, ralph/prd.json
+- **Learnings for future iterations:**
+  - Use `express.raw({ type: '*/*', limit: '10mb' })` to receive binary audio as `Buffer` in Express
+  - Server typecheck: `cd server && npm run typecheck`
+  - Auth pattern: `req.headers['authorization'] !== \`Bearer \${API_TOKEN}\`` → 401
 ---
