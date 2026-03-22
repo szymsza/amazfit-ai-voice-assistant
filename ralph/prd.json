@@ -14,7 +14,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "HUMAN CHECKPOINT: After this story, yield control to the user. They must install Zepp CLI, register a dev account, and verify the app runs in the simulator before continuing."
     },
     {
@@ -247,6 +247,23 @@
       "priority": 16,
       "passes": false,
       "notes": "HUMAN CHECKPOINT: User must verify settings page works and values persist correctly."
+    },
+    {
+      "id": "US-018",
+      "title": "Readme, placeholder icon, and deployment readiness",
+      "description": "As a developer and end user, I need documentation, a placeholder app icon, and scripts to build and run the project.",
+      "acceptanceCriteria": [
+        "README.md created with user-facing section: what the app does, prerequisites (Groq API key, server URL), setup steps with PLACEHOLDER_SERVER_URL and PLACEHOLDER_API_KEY clearly marked for the user to fill in",
+        "README.md includes developer section: how to deploy the server (clone, npm install, environment variables, npm run start), how to build and sideload the watch app, how to contribute",
+        "Placeholder icon added at app/assets/icon.png (any solid-color PNG, 240x240 minimum) with a comment in README that it should be replaced",
+        "Root package.json has a 'start' script that starts the server (e.g. node server/index.js)",
+        "Root package.json has a 'build' script that builds the Zepp OS watch app (e.g. zeus build)",
+        "server/package.json (or root) has all server runtime dependencies listed so npm install works out of the box",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "HUMAN CHECKPOINT: User will replace the placeholder icon with the real one and fill in their server URL and API key in the README examples."
     },
     {
       "id": "US-017",
