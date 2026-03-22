@@ -11,8 +11,8 @@ You are an autonomous coding agent working on a software project.
 5. Implement that single user story
 6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
 7. Update CLAUDE.md files if you discover reusable patterns (see below)
-8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
-9. Update the PRD to set `passes: true` for the completed story
+8. Update the PRD to set `passes: true` for the completed story
+9. If checks pass, commit ALL changes (including updated PRD and progress.txt) with message: `feat: [Story ID] - [Story Title]`
 10. Append your progress to `progress.txt`
 
 ## Progress Report Format
@@ -106,6 +106,7 @@ If there are still stories with `passes: false`, end your response normally (ano
 ## Codebase Conventions
 
 - **Language:** The entire project uses **TypeScript** — both the Zepp OS watch app (`app/`) and the Node.js server (`server/`). Never create `.js` source files.
+- **No `any`:** Never use `type any` or `as any`. Use typed intersections, `unknown`, or proper type declarations instead.
 - **Watch app typecheck:** `cd app && npm run typecheck` (runs `tsc --noEmit --project tsconfig.json`)
 - **Server typecheck:** `cd server && npm run typecheck` (configure similarly when creating the server)
 - **Zepp OS:** The watch app targets Amazfit Balance (round screen 480×480). Page files use `.ts` extension; the zeus build tool compiles them. API level 4.0.

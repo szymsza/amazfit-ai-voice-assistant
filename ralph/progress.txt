@@ -1,3 +1,30 @@
 # Ralph Progress Log
-Started: Ne 22. března 2026, 13:31:24 CET
+Started: Ne 22. března 2026, 13:31:24 CET
+---
+
+## Codebase Patterns
+- TypeScript strict mode throughout — no `any`, no `.js` source files
+- `Page.Option` only accepts `state`, `onInit`, `build`, `onDestroy` — use module-level variables for page state/widgets
+- `CLICK_AREA` widget missing from `@zeppos/device-types`; access via typed intersection: `hmUI.widget as typeof hmUI.widget & { readonly CLICK_AREA: number }`
+- `setProperty(prop.COLOR, number)` updates CIRCLE colour; `prop.MORE` only accepts `HmUIPropertyValue` (string|number|boolean|undefined), not objects
+- `@zos/media` (Recorder/Player) not in device-types — declared in `app/global.d.ts`
+- zosLoader module in `global.d.ts` uses `export { ... } from './page/gt/home/index.page.r.layout'` so layout types stay in sync automatically
+- App name: "AI Voice Assistant"
+
+---
+
+## 2026-03-22 - US-002
+- Implemented watch UI: record button (CIRCLE widget) with 5-state colour changes + TEXT state label
+- Integrated Zepp OS Recorder API (OPUS, 16kHz) via module-level state pattern
+- Converted entire app/ from JavaScript to TypeScript (strict mode); replaced jsconfig.json with tsconfig.json
+- Added `@zos/media` type declarations to global.d.ts; zosLoader module now re-exports from actual layout file
+- Updated app name to "AI Voice Assistant" throughout (app.json, i18n, package.json)
+- Added microphone permission to app.json
+- Updated ralph/CLAUDE.md with TypeScript conventions; updated ralph/prd.json language field
+- Files changed: app/app.ts, app/app.json, app/package.json, app/tsconfig.json, app/global.d.ts, app/page/gt/home/index.page.ts, app/page/gt/home/index.page.r.layout.ts, app/app-side/index.ts, app/setting/index.ts, app/utils/index.ts, app/page/i18n/en-US.po, ralph/CLAUDE.md, ralph/prd.json
+- **Learnings for future iterations:**
+  - `Page.Option` is strictly typed — no custom methods/properties allowed inside `Page({})`; module-level vars are the correct Zepp OS TS pattern
+  - `CLICK_AREA` exists at runtime but is absent from `@zeppos/device-types`; typed intersection cast avoids `any`
+  - `HmUIPropertyValue` is narrow (`string|number|boolean|undefined`) — can't pass objects to `setProperty`; use `prop.COLOR` for colour updates
+  - Namespace augmentation doesn't work for `export =` style modules; use typed intersection at call site instead
 ---
