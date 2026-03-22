@@ -2,6 +2,7 @@ import * as hmUI from '@zos/ui'
 import { log as Logger } from '@zos/utils'
 import { createRecorder, createPlayer } from '@zos/media'
 import type { RecorderInstance, PlayerInstance } from '@zos/media'
+import { openSync, readSync, writeSync, closeSync, statSync, O_RDONLY, O_RDWR, O_CREAT, O_TRUNC } from '@zos/fs'
 import {
   RING_STYLE,
   BTN_STYLE,
@@ -35,7 +36,13 @@ const BTN_COLORS: Record<AppState, number> = {
   [AppState.Playing]: 0x2196f3,
 }
 
+// data:// paths used by Recorder/Player APIs
 const RECORDING_PATH = 'data://recording.opus'
+const RESPONSE_PATH = 'data://response.opus'
+
+// relative paths used by @zos/fs (relative to the app /data directory)
+const RECORDING_FILE = 'recording.opus'
+const RESPONSE_FILE = 'response.opus'
 
 // CLICK_AREA is a valid Zepp OS widget not yet included in @zeppos/device-types
 const zepposWidget = hmUI.widget as typeof hmUI.widget & { readonly CLICK_AREA: number }
@@ -53,11 +60,11 @@ function setState(newState: AppState): void {
   btnWidget?.setProperty(hmUI.prop.COLOR, BTN_COLORS[newState])
 }
 
-function startPlayback(): void {
+function startPlayback(filePath: string): void {
   try {
     player = createPlayer()
     player.prepare()
-    player.setSource({ filePath: RECORDING_PATH })
+    player.setSource({ filePath })
     player.addEventListener('play_end', () => {
       logger.debug('playback ended')
       player = null
@@ -77,11 +84,48 @@ function startPlayback(): void {
   }
 }
 
+function sendToSideService(): void {
+  // Guard: only send if we just finished recording
+  if (appState !== AppState.Recording) return
+  setState(AppState.Sending)
+
+  // Read the recorded audio file into an ArrayBuffer
+  const stat = statSync({ path: RECORDING_FILE })
+  if (!stat) {
+    logger.error('recording file not found')
+    setState(AppState.Idle)
+    return
+  }
+  const audioBuffer = new ArrayBuffer(stat.size)
+  const fd = openSync({ path: RECORDING_FILE, flag: O_RDONLY })
+  readSync({ fd, buffer: audioBuffer })
+  closeSync({ fd })
+
+  // Send audio to Side Service via BLE messaging (BaseApp sets up .request())
+  const appRequest = getApp()._options.request as (data: ArrayBuffer) => Promise<Uint8Array>
+  appRequest(audioBuffer)
+    .then((responseData: Uint8Array) => {
+      // Write response audio to file so Player can read it
+      const ab = responseData.buffer.slice(
+        responseData.byteOffset,
+        responseData.byteOffset + responseData.byteLength
+      ) as ArrayBuffer
+      const wfd = openSync({ path: RESPONSE_FILE, flag: O_RDWR | O_CREAT | O_TRUNC })
+      writeSync({ fd: wfd, buffer: ab })
+      closeSync({ fd: wfd })
+      startPlayback(RESPONSE_PATH)
+    })
+    .catch((err: unknown) => {
+      logger.error('side service request failed: ' + String(err))
+      setState(AppState.Idle)
+    })
+}
+
 function stopRecording(): void {
   if (recorder) {
     try { recorder.stop() } catch (_) { /* may already be stopped */ }
   }
-  startPlayback()
+  sendToSideService()
 }
 
 function startRecording(): void {
@@ -91,7 +135,7 @@ function startRecording(): void {
     recorder.setFormat({ codec: 'OPUS', sampleRate: 16000, filePath: RECORDING_PATH })
     recorder.addEventListener('record_end', () => {
       logger.debug('recording ended')
-      startPlayback()
+      sendToSideService()
     })
     recorder.start()
     setState(AppState.Recording)

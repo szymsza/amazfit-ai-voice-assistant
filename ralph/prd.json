@@ -76,7 +76,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "HUMAN CHECKPOINT: After this story, user must test the full round-trip: watch -> Side Service -> echo server -> Side Service -> watch."
     },
     {

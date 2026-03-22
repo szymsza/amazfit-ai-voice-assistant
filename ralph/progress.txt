@@ -12,6 +12,10 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - App name: "AI Voice Assistant"
 - Server uses `express.raw({ type: '*/*', limit: '10mb' })` to receive binary audio as `Buffer`
 - Server typecheck: `cd server && npm run typecheck`
+- BLE watch↔side messaging uses `@zeppos/zml/base-app` (device) + `@zeppos/zml/base-side` (phone). `BaseApp` sets up `globalData.messaging` and adds `request()` to app options; call from page via `getApp()._options.request as (data: ArrayBuffer) => Promise<Uint8Array>`
+- `Buffer`, `fetch`, `settings` globals are available in side service but absent from `@zeppos/device-types`; declared in `app/global.d.ts`
+- `BaseSideService.onRequest(req, res)`: `req` is `ArrayBuffer` (binary content type); `res(null, Buffer.from(ab))` sends response back — must pass a Buffer (not raw ArrayBuffer) so the zml protocol's `.copy()` call works
+- `@zos/fs` paths are relative to the app `/data` dir; `data://foo.opus` → path `'foo.opus'` in `openSync`/`statSync`/`writeSync`
 
 ---
 
@@ -54,4 +58,18 @@ Started: Ne 22. března 2026, 13:31:24 CET
   - Use `express.raw({ type: '*/*', limit: '10mb' })` to receive binary audio as `Buffer` in Express
   - Server typecheck: `cd server && npm run typecheck`
   - Auth pattern: `req.headers['authorization'] !== \`Bearer \${API_TOKEN}\`` → 401
+---
+
+## 2026-03-22 - US-005
+- Implemented Side Service: receives audio from watch via BLE messaging, POSTs to server, returns response audio
+- Updated watch page: after recording, reads audio file with `@zos/fs`, sends to Side Service, writes response file, plays it
+- Updated `app/app.ts` to use `BaseApp` from `@zeppos/zml/base-app` (required for BLE messaging infrastructure)
+- Added `Buffer`, `fetch`, `settings`, `BaseApp`, `BaseSideService` type declarations to `app/global.d.ts`
+- Server URL + API token read from `settings.settingsStorage` (keys: `serverUrl`, `apiToken`); defaults to `http://localhost:3000`
+- Files changed: app/global.d.ts, app/app.ts, app/app-side/index.ts, app/page/gt/home/index.page.ts, ralph/prd.json
+- **Learnings for future iterations:**
+  - `BaseSideService.onRequest(req, res)`: `req` is ArrayBuffer; must call `res(null, Buffer.from(arrayBuffer))` — raw ArrayBuffer breaks zml protocol (`.copy()` is a Buffer method)
+  - `BaseApp` from `@zeppos/zml/base-app` adds `request()` to app options; call from page as `getApp()._options.request as (data: ArrayBuffer) => Promise<Uint8Array>`
+  - `@zos/fs` paths are relative to `/data` dir: `data://recording.opus` → `openSync({ path: 'recording.opus' })`
+  - `sendToSideService()` guards with `if (appState !== AppState.Recording) return` to prevent double-invocation from both manual stop and `record_end` event
 ---

@@ -4,6 +4,67 @@
 declare function AppSideService(option: Record<string, unknown>): void
 declare function AppSettingsPage(option: Record<string, unknown>): void
 
+// Buffer global (available in both device runtime and phone-side service runtime)
+type ZeppBuffer = Uint8Array & {
+  copy(target: Uint8Array, targetStart?: number, sourceStart?: number, sourceEnd?: number): number
+}
+declare const Buffer: {
+  from(input: ArrayBuffer | Uint8Array): ZeppBuffer
+  from(input: string, encoding?: string): ZeppBuffer
+  alloc(size: number): ZeppBuffer
+  isBuffer(obj: unknown): obj is ZeppBuffer
+  concat(buffers: ZeppBuffer[]): ZeppBuffer
+}
+
+// fetch global (available in phone-side service runtime)
+declare function fetch(url: string, init?: {
+  method?: string
+  headers?: Record<string, string>
+  body?: ArrayBuffer | Uint8Array | string | null
+}): Promise<{
+  ok: boolean
+  status: number
+  arrayBuffer(): Promise<ArrayBuffer>
+  json(): Promise<unknown>
+  text(): Promise<string>
+}>
+
+// settings global (available in phone-side service runtime)
+declare const settings: {
+  settingsStorage: {
+    getItem(key: string): string | null
+    setItem(key: string, value: string): void
+    removeItem(key: string): void
+    clear(): void
+  }
+}
+
+// @zeppos/zml/base-app: sets up BLE messaging infrastructure on device side
+declare module '@zeppos/zml/base-app' {
+  type BaseAppInput = {
+    globalData?: Record<string, unknown>
+    onCreate?: () => void
+    onDestroy?: () => void
+    [key: string]: unknown
+  }
+  function BaseApp(option: BaseAppInput): App.Option
+  export { BaseApp }
+}
+
+// @zeppos/zml/base-side: sets up BLE messaging infrastructure on phone-side service
+declare module '@zeppos/zml/base-side' {
+  type SideServiceInput = {
+    onInit?: () => void
+    onRun?: () => void
+    onDestroy?: () => void
+    onRequest?: (req: unknown, res: (err: unknown, data?: unknown) => void) => void
+    onSettingsChange?: (change: Record<string, unknown>) => void
+    [key: string]: unknown
+  }
+  function BaseSideService(option: SideServiceInput): Record<string, unknown>
+  export { BaseSideService }
+}
+
 // Zepp OS build-time loader: re-export types from the actual round-screen layout file
 declare module 'zosLoader:./index.page.[pf].layout.js' {
   export { RING_STYLE, BTN_STYLE, CLICK_AREA_STYLE, STATE_TEXT_STYLE, DEVICE_WIDTH, DEVICE_HEIGHT } from './page/gt/home/index.page.r.layout'
