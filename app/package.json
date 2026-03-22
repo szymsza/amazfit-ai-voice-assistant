@@ -1,10 +1,10 @@
 {
-  "name": "amazfit-voice-assistant",
+  "name": "ai-voice-assistant",
   "version": "1.0.0",
-  "description": "Voice AI assistant for Amazfit Balance",
+  "description": "AI Voice Assistant for Amazfit Balance",
   "main": "app.js",
   "scripts": {
-    "typecheck": "tsc --noEmit --project jsconfig.json",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
     "dev": "zeus dev",
     "build": "zeus build",
     "preview": "zeus preview"

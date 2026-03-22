@@ -2,7 +2,7 @@
   "configVersion": "v3",
   "app": {
     "appId": 20001,
-    "appName": "Voice Assistant",
+    "appName": "AI Voice Assistant",
     "appType": "app",
     "version": {
       "code": 1,
@@ -10,11 +10,12 @@
     },
     "icon": "icon.png",
     "vender": "zepp",
-    "description": "Voice AI assistant for Amazfit Balance"
+    "description": "AI Voice Assistant for Amazfit Balance"
   },
   "permissions": [
     "data:os.device.info",
-    "device:os.local_storage"
+    "device:os.local_storage",
+    "device:os.microphone"
   ],
   "runtime": {
     "apiVersion": {
@@ -47,7 +48,7 @@
   },
   "i18n": {
     "en-US": {
-      "appName": "Voice Assistant"
+      "appName": "AI Voice Assistant"
     }
   },
   "defaultLanguage": "en-US"

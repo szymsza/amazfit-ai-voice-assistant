@@ -1,7 +1,8 @@
 {
-  "project": "AmazfitVoiceAssistant",
+  "project": "AI Voice Assistant for Amazfit Balance",
   "branchName": "ralph/voice-assistant",
-  "description": "Voice AI assistant for Amazfit Balance - STT/LLM/TTS pipeline with Zepp OS app and Node.js server",
+  "language": "TypeScript (both watch app in app/ and server in server/)",
+  "description": "AI Voice Assistant for Amazfit Balance - STT/LLM/TTS pipeline with Zepp OS TypeScript app and Node.js/TypeScript server",
   "userStories": [
     {
       "id": "US-001",
@@ -50,7 +51,7 @@
       "title": "Build echo server with auth",
       "description": "As a developer, I need a Node.js server that echoes back received audio, so I can test the pipeline before adding AI.",
       "acceptanceCriteria": [
-        "Node.js/Express server in server/ directory",
+        "Node.js/Express server in TypeScript in server/ directory",
         "POST /api/voice endpoint accepts audio bytes in request body",
         "Validates shared secret API token from Authorization header",
         "Returns 401 for missing/invalid token",

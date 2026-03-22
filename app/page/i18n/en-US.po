@@ -1,2 +1,2 @@
 msgid "appName"
-msgstr "Voice Assistant"
+msgstr "AI Voice Assistant"

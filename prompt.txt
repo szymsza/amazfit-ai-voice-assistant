@@ -1,0 +1,1 @@
+Read ralph/prd.json and ralph/progress.txt, then implement the single highest-priority user story where passes is false. Follow the instructions in ralph/CLAUDE.md exactly. Work on ONE story only. 

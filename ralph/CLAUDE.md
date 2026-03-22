@@ -102,3 +102,11 @@ If there are still stories with `passes: false`, end your response normally (ano
 - Commit frequently
 - Keep CI green
 - Read the Codebase Patterns section in progress.txt before starting
+
+## Codebase Conventions
+
+- **Language:** The entire project uses **TypeScript** — both the Zepp OS watch app (`app/`) and the Node.js server (`server/`). Never create `.js` source files.
+- **Watch app typecheck:** `cd app && npm run typecheck` (runs `tsc --noEmit --project tsconfig.json`)
+- **Server typecheck:** `cd server && npm run typecheck` (configure similarly when creating the server)
+- **Zepp OS:** The watch app targets Amazfit Balance (round screen 480×480). Page files use `.ts` extension; the zeus build tool compiles them. API level 4.0.
+- **Missing Zepp OS types:** `@zos/media` and other modules not covered by `@zeppos/device-types` must be declared in `app/global.d.ts`.
