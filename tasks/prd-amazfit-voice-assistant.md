@@ -50,7 +50,7 @@ The server receives audio and conversation history, transcribes the audio, gener
 
 **Acceptance Criteria:**
 - [ ] Node.js/Express server in server/ directory
-- [ ] POST /api/voice endpoint accepts audio bytes in request body
+- [ ] POST /api/ask endpoint accepts audio bytes in request body
 - [ ] Validates shared secret API token from Authorization header
 - [ ] Returns 401 for missing/invalid token
 - [ ] Returns the same audio bytes in response on valid request
@@ -133,10 +133,10 @@ The server receives audio and conversation history, transcribes the audio, gener
 - [ ] Uses Groq API key from request
 
 ### US-013: Server - wire up full pipeline endpoint
-**Description:** As a developer, I need the /api/voice endpoint to chain STT -> LLM -> TTS and return audio + text.
+**Description:** As a developer, I need the /api/ask endpoint to chain STT -> LLM -> TTS and return audio + text.
 
 **Acceptance Criteria:**
-- [ ] POST /api/voice accepts: audio bytes, conversation history, provider config (provider, model, voice, max turns), API keys
+- [ ] POST /api/ask accepts: audio bytes, conversation history, provider config (provider, model, voice, max turns), API keys
 - [ ] Pipeline: receive audio -> Whisper STT -> LLM (selected provider) -> Orpheus TTS -> ffmpeg -> respond
 - [ ] Response includes: OPUS audio, transcribed question text, LLM response text, updated conversation array
 - [ ] Errors at any stage return a meaningful error message to the client

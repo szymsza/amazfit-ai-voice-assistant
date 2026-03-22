@@ -52,7 +52,7 @@
       "description": "As a developer, I need a Node.js server that echoes back received audio, so I can test the pipeline before adding AI.",
       "acceptanceCriteria": [
         "Node.js/Express server in TypeScript in server/ directory",
-        "POST /api/voice endpoint accepts audio bytes in request body",
+        "POST /api/ask endpoint accepts audio bytes in request body",
         "Validates shared secret API token from Authorization header",
         "Returns 401 for missing/invalid token",
         "Returns the same audio bytes in response on valid request",
@@ -188,9 +188,9 @@
     {
       "id": "US-013",
       "title": "Server - wire up full pipeline endpoint",
-      "description": "As a developer, I need the /api/voice endpoint to chain STT -> LLM -> TTS and return audio + text.",
+      "description": "As a developer, I need the /api/ask endpoint to chain STT -> LLM -> TTS and return audio + text.",
       "acceptanceCriteria": [
-        "POST /api/voice accepts: audio bytes, conversation history, provider config (provider, model, voice, max turns), API keys",
+        "POST /api/ask accepts: audio bytes, conversation history, provider config (provider, model, voice, max turns), API keys",
         "Pipeline: receive audio -> Whisper STT -> LLM (selected provider) -> Orpheus TTS -> ffmpeg -> respond",
         "Response includes: OPUS audio, transcribed question text, LLM response text, updated conversation array",
         "Errors at any stage return a meaningful error message to the client",
