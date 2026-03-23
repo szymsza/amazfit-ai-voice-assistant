@@ -29,6 +29,15 @@ declare function fetch(url: string, init?: {
   text(): Promise<string>
 }>
 
+// messaging global (available in phone-side service runtime) - BLE peerSocket
+declare const messaging: {
+  peerSocket: {
+    addListener(event: string, callback: (msg: unknown) => void): void
+    removeListener(event: string, callback: (msg: unknown) => void): void
+    send(data: ArrayBuffer): void
+  }
+} | undefined
+
 // settings global (available in phone-side service runtime)
 declare const settings: {
   settingsStorage: {
@@ -49,6 +58,22 @@ declare module '@zeppos/zml/base-app' {
   }
   function BaseApp(option: BaseAppInput): App.Option
   export { BaseApp }
+}
+
+// @zeppos/zml/base-page: provides this.request() for BLE communication with side service
+declare module '@zeppos/zml/base-page' {
+  interface BasePageThis {
+    request(data: ArrayBuffer, opts?: Record<string, unknown>): Promise<Uint8Array>
+  }
+  type BasePageInput = {
+    state?: Record<string, unknown>
+    onInit?(this: BasePageThis): void
+    build?(this: BasePageThis): void
+    onDestroy?(this: BasePageThis): void
+    [key: string]: unknown
+  }
+  function BasePage(option: BasePageInput): Record<string, unknown>
+  export { BasePage, BasePageThis }
 }
 
 // @zeppos/zml/base-side: sets up BLE messaging infrastructure on phone-side service
@@ -85,35 +110,21 @@ declare module '@zos/ui' {
 
 // Zepp OS media module (recorder + player)
 declare module '@zos/media' {
-  export interface RecorderFormat {
-    codec: 'OPUS' | 'AAC' | 'PCM'
-    sampleRate?: number
-    bitRate?: number
-    duration?: number
-    filePath: string
-  }
+  const id: { readonly RECORDER: number; readonly PLAYER: number }
+  const codec: { readonly OPUS: string; readonly AAC: string; readonly PCM: string }
 
-  export interface RecorderInstance {
-    prepare(): void
-    setFormat(format: RecorderFormat): void
-    start(): void
-    stop(): void
-    addEventListener(event: 'record_end' | 'record_error', callback: (result?: unknown) => void): void
-    removeEventListener(event: string, callback: (result?: unknown) => void): void
-    getFormat(): RecorderFormat
-  }
-
-  export interface PlayerInstance {
-    prepare(): void
-    setSource(source: { filePath: string }): void
+  interface MediaInstance {
+    setFormat(codec: string, options: Record<string, unknown>): void
+    setSource(type: unknown, options: Record<string, unknown>): void
+    prepare(options?: Record<string, unknown>): void
     start(): void
     stop(): void
     pause(): void
     resume(): void
-    addEventListener(event: 'play_end' | 'play_error', callback: (result?: unknown) => void): void
+    addEventListener(event: string, callback: (result?: unknown) => void): void
     removeEventListener(event: string, callback: (result?: unknown) => void): void
   }
 
-  export function createRecorder(): RecorderInstance
-  export function createPlayer(): PlayerInstance
+  function create(type: number): MediaInstance
+  export { id, codec, create, MediaInstance }
 }

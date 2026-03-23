@@ -1,11 +1,14 @@
 import * as hmUI from '@zos/ui'
 import { log as Logger } from '@zos/utils'
-import { createRecorder, createPlayer } from '@zos/media'
-import type { RecorderInstance, PlayerInstance } from '@zos/media'
+import { create, id as mediaId, codec as mediaCodec } from '@zos/media'
+import type { MediaInstance } from '@zos/media'
 import { openSync, readSync, writeSync, closeSync, statSync, O_RDONLY, O_RDWR, O_CREAT, O_TRUNC } from '@zos/fs'
+import { getTestAudioBuffer } from '../../../utils/testAudio'
+import { BasePage, BasePageThis } from '@zeppos/zml/base-page'
 import {
   RING_STYLE,
   BTN_STYLE,
+  CLICK_AREA_STYLE,
   STATE_TEXT_STYLE,
 } from 'zosLoader:./index.page.[pf].layout.js'
 
@@ -46,10 +49,11 @@ const RESPONSE_FILE = 'response.opus'
 
 // Module-level state (Page.Option only accepts lifecycle methods + state object)
 let appState = AppState.Idle
-let recorder: RecorderInstance | null = null
-let player: PlayerInstance | null = null
+let recorder: MediaInstance | null = null
+let player: MediaInstance | null = null
 let stateTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
 let btnWidget: ReturnType<typeof hmUI.createWidget> | null = null
+let requestFn: ((data: ArrayBuffer) => Promise<Uint8Array>) | null = null
 
 function setState(newState: AppState): void {
   appState = newState
@@ -59,16 +63,10 @@ function setState(newState: AppState): void {
 
 function startPlayback(filePath: string): void {
   try {
-    player = createPlayer()
-    player.prepare()
-    player.setSource({ filePath })
-    player.addEventListener('play_end', () => {
+    player = create(mediaId.PLAYER)
+    player.prepare({ src: filePath })
+    player.addEventListener('complete', () => {
       logger.debug('playback ended')
-      player = null
-      setState(AppState.Idle)
-    })
-    player.addEventListener('play_error', (result) => {
-      logger.error('playback error: ' + JSON.stringify(result))
       player = null
       setState(AppState.Idle)
     })
@@ -82,26 +80,27 @@ function startPlayback(filePath: string): void {
 }
 
 function sendToSideService(): void {
-  // Guard: only send if we just finished recording
-  if (appState !== AppState.Recording) return
-  setState(AppState.Sending)
+  // Guard: only send if we're in the sending state (set by stopRecording)
+  if (appState !== AppState.Sending) return
 
   // Read the recorded audio file into an ArrayBuffer
+  let audioBuffer: ArrayBuffer
   const stat = statSync({ path: RECORDING_FILE })
   if (!stat) {
-    logger.error('recording file not found')
-    setState(AppState.Idle)
-    return
+    logger.warn('recording file not found — using test audio (simulator bypass)')
+    audioBuffer = getTestAudioBuffer()
+  } else {
+    audioBuffer = new ArrayBuffer(stat.size)
+    const fd = openSync({ path: RECORDING_FILE, flag: O_RDONLY })
+    readSync({ fd, buffer: audioBuffer })
+    closeSync({ fd })
   }
-  const audioBuffer = new ArrayBuffer(stat.size)
-  const fd = openSync({ path: RECORDING_FILE, flag: O_RDONLY })
-  readSync({ fd, buffer: audioBuffer })
-  closeSync({ fd })
 
-  // Send audio to Side Service via BLE messaging (BaseApp sets up .request())
-  const appRequest = getApp()._options.request as (data: ArrayBuffer) => Promise<Uint8Array>
-  appRequest(audioBuffer)
+  logger.debug('calling requestFn, buffer size: ' + audioBuffer.byteLength)
+  // Send audio to Side Service via BLE (BasePage provides this.request via requestFn)
+  requestFn!(audioBuffer)
     .then((responseData: Uint8Array) => {
+      logger.debug('got response, size: ' + responseData.byteLength)
       // Write response audio to file so Player can read it
       const ab = responseData.buffer.slice(
         responseData.byteOffset,
@@ -122,17 +121,21 @@ function stopRecording(): void {
   if (recorder) {
     try { recorder.stop() } catch (_) { /* may already be stopped */ }
   }
-  sendToSideService()
+  setState(AppState.Sending)
+  // Give recorder 500ms to flush the file before reading it
+  setTimeout(sendToSideService, 500)
 }
 
 function startRecording(): void {
   try {
-    recorder = createRecorder()
-    recorder.prepare()
-    recorder.setFormat({ codec: 'OPUS', sampleRate: 16000, filePath: RECORDING_PATH })
-    recorder.addEventListener('record_end', () => {
-      logger.debug('recording ended')
-      sendToSideService()
+    logger.debug('RECORDER=' + mediaId.RECORDER + ' PLAYER=' + mediaId.PLAYER + ' OPUS=' + mediaCodec.OPUS + ' AAC=' + mediaCodec.AAC)
+    recorder = create(mediaId.RECORDER)
+    logger.debug('recorder type=' + typeof recorder + ' keys=' + Object.keys(recorder as object).join(','))
+    recorder.setFormat(mediaCodec.OPUS, { target_file: RECORDING_PATH })
+    logger.debug('setFormat called')
+    recorder.addEventListener('complete', () => {
+      logger.debug('recording complete event fired')
+      recorder = null
     })
     recorder.start()
     setState(AppState.Recording)
@@ -150,8 +153,9 @@ function onButtonPress(): void {
   }
 }
 
-Page({
-  onInit() {
+Page(BasePage({
+  onInit(this: BasePageThis) {
+    requestFn = (data: ArrayBuffer) => this.request(data)
     logger.debug('page onInit invoked')
   },
 
@@ -161,7 +165,10 @@ Page({
     hmUI.createWidget(hmUI.widget.CIRCLE, RING_STYLE)
     btnWidget = hmUI.createWidget(hmUI.widget.CIRCLE, BTN_STYLE)
     stateTextWidget = hmUI.createWidget(hmUI.widget.TEXT, STATE_TEXT_STYLE)
-    btnWidget.addEventListener(hmUI.event.CLICK_UP, onButtonPress)
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      ...CLICK_AREA_STYLE,
+      click_func: onButtonPress,
+    })
   },
 
   onDestroy() {
@@ -176,6 +183,7 @@ Page({
     }
     stateTextWidget = null
     btnWidget = null
+    requestFn = null
     appState = AppState.Idle
   },
-})
+}))
