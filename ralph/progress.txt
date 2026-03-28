@@ -140,3 +140,16 @@ Started: Ne 22. března 2026, 13:31:24 CET
   - Anthropic response: `content` is an array of typed blocks; find `type === 'text'` to get the text response
   - Model IDs: `claude-haiku-4-5` (fast/cheap), `claude-sonnet-4-6` (higher quality)
 ---
+
+## 2026-03-28 - US-011
+- Created `server/src/providers/openai.ts` — OpenAI ChatGPT LLM provider
+- POSTs to `https://api.openai.com/v1/chat/completions` with Bearer auth
+- Default model: `gpt-4o-mini`; supports `gpt-4o-mini` and `gpt-4o`
+- Response shape matches Groq (OpenAI-compatible): `{ choices: [{ message: { content: string } }] }`
+- Registered via `registerProvider('openai', openaiProvider)` on import
+- Updated `server/src/index.ts` to side-effect-import `./providers/openai.js`
+- Files changed: server/src/providers/openai.ts (new), server/src/index.ts, ralph/prd.json, ralph/progress.txt
+- **Learnings for future iterations:**
+  - OpenAI chat completions API is identical in shape to Groq's API (both OpenAI-compatible); provider code is nearly identical
+  - OpenAI provider name is `'openai'` (not `'chatgpt'`) to keep it consistent with the SDK naming
+---

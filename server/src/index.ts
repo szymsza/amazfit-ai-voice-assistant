@@ -3,6 +3,7 @@ import express, { Request, Response } from 'express';
 import { transcribeAudio } from './stt.js';
 import './providers/groq.js';
 import './providers/claude.js';
+import './providers/openai.js';
 
 const app = express();
 const PORT = process.env.PORT ?? '3000';
