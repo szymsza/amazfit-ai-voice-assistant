@@ -61,34 +61,44 @@ function setState(newState: AppState): void {
   btnWidget?.setProperty(hmUI.prop.COLOR, BTN_COLORS[newState])
 }
 
-function startPlayback(fileName: string): void {
-  const p = create(mediaId.PLAYER)
-  player = p
+function initMediaInstances(): void {
+  recorder = create(mediaId.RECORDER)
+  if (!recorder) {
+    logger.error('recorder create returned null/undefined')
+  }
 
-  logger.debug('startPlayback: ' + fileName)
+  player = create(mediaId.PLAYER)
+  if (!player) {
+    logger.error('player create returned null/undefined')
+    return
+  }
 
-  p.addEventListener(p.event.PREPARE, (result: unknown) => {
+  player.addEventListener(player.event.PREPARE, (result: unknown) => {
     logger.debug('PREPARE result=' + String(result))
     if (result) {
-      p.start()
+      player!.start()
     } else {
       logger.error('prepare failed')
-      p.release()
-      player = null
       setState(AppState.Idle)
     }
   })
 
-  p.addEventListener(p.event.COMPLETE, () => {
+  player.addEventListener(player.event.COMPLETE, () => {
     logger.debug('COMPLETE')
-    p.stop()
-    p.release()
-    player = null
+    player!.stop()
     setState(AppState.Idle)
   })
+}
 
-  p.setSource(p.source.FILE, { file: fileName })
-  p.prepare()
+function startPlayback(fileName: string): void {
+  if (!player) {
+    logger.error('player not initialized')
+    setState(AppState.Idle)
+    return
+  }
+  logger.debug('startPlayback: ' + fileName)
+  player.setSource(player.source.FILE, { file: fileName })
+  player.prepare()
   setState(AppState.Playing)
 }
 
@@ -99,8 +109,8 @@ function sendToSideService(): void {
   // Read the recorded audio file into an ArrayBuffer
   let audioBuffer: ArrayBuffer
   const stat = statSync({ path: RECORDING_FILE })
-  if (!stat) {
-    logger.warn('recording file not found — using test audio (simulator bypass)')
+  if (!stat || stat.size === 0) {
+    logger.warn('recording file not found or empty (size=' + (stat?.size ?? 'n/a') + ') — using test audio (simulator bypass)')
     audioBuffer = getTestAudioBuffer()
   } else {
     audioBuffer = new ArrayBuffer(stat.size)
@@ -136,14 +146,13 @@ function stopRecording(): void {
 }
 
 function startRecording(): void {
+  if (!recorder) {
+    logger.error('recorder not initialized')
+    setState(AppState.Idle)
+    return
+  }
   try {
-    recorder = create(mediaId.RECORDER)
     recorder.setFormat(mediaCodec.OPUS, { target_file: RECORDING_PATH })
-    recorder.addEventListener('complete', () => {
-      logger.debug('recording complete')
-      try { recorder!.release() } catch (_) { /* ignore */ }
-      recorder = null
-    })
     recorder.start()
     setState(AppState.Recording)
     logger.debug('recording started')
@@ -165,6 +174,7 @@ Page(BasePage({
   onInit(this: BasePageThis) {
     requestFn = (data: ArrayBuffer) => this.request(data)
     logger.debug('page onInit')
+    initMediaInstances()
   },
 
   build() {
