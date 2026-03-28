@@ -151,7 +151,7 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -279,6 +279,23 @@
       "priority": 17,
       "passes": false,
       "notes": "This requires API keys for OpenAI and Anthropic. Yield control to the user to provide keys and review results."
+    },
+    {
+      "id": "US-019",
+      "title": "Code quality: TypeScript strictness, Prettier, and cleanup",
+      "description": "As a developer, I want the codebase to be clean, strictly typed, and consistently formatted so it is easy to maintain and extend.",
+      "acceptanceCriteria": [
+        "No use of `any` type anywhere in the codebase",
+        "No `as X` type casts — use proper type declarations, type guards, or `satisfies` instead",
+        "Prettier config added (`.prettierrc`) and all files formatted",
+        "All debug `console.log` / `console.error` statements removed or replaced with structured logging where appropriate",
+        "No dead code, commented-out blocks, or leftover TODOs",
+        "Code is readable: clear variable names, no overly clever one-liners",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "Run this story last — after all features are implemented — so refactoring does not conflict with in-progress feature work."
     }
   ]
 }

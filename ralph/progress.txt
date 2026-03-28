@@ -85,6 +85,8 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - Files changed: ralph/prd.json (passes: true)
 - **Learnings for future iterations:**
   - When stories overlap in implementation scope (US-005 and US-006 both cover watch↔side BLE), it is valid to mark the later story as passing if the code already satisfies its acceptance criteria
+- Anthropic API: POST to `https://api.anthropic.com/v1/messages`; requires `x-api-key` + `anthropic-version: 2023-06-01` headers + `max_tokens`; response shape: `{ content: [{ type: 'text', text: string }] }`
+
 ---
 
 ## 2026-03-28 - US-007
@@ -123,4 +125,18 @@ Started: Ne 22. března 2026, 13:31:24 CET
   - Provider files live in `server/src/providers/`; each calls `registerProvider(name, fn)` on import; `index.ts` side-effect-imports them to trigger registration
   - Groq chat API response shape: `{ choices: [{ message: { content: string } }] }` — extract `choices[0].message.content`
   - Empty `model` string falls back to `DEFAULT_MODEL` via `model || DEFAULT_MODEL`
+---
+
+## 2026-03-28 - US-010
+- Created `server/src/providers/claude.ts` — Anthropic Claude LLM provider
+- POSTs to `https://api.anthropic.com/v1/messages` with `x-api-key`, `anthropic-version: 2023-06-01`, `max_tokens: 1024`
+- Default model: `claude-haiku-4-5`; supports `claude-haiku-4-5` and `claude-sonnet-4-6`
+- Response shape: `{ content: [{ type: 'text', text: string }] }` — finds first block with `type === 'text'`
+- Registered via `registerProvider('claude', claudeProvider)` on import
+- Updated `server/src/index.ts` to side-effect-import `./providers/claude.js`
+- Files changed: server/src/providers/claude.ts (new), server/src/index.ts, ralph/prd.json, ralph/progress.txt
+- **Learnings for future iterations:**
+  - Anthropic API requires `anthropic-version` header and `max_tokens` in body (unlike OpenAI-compatible APIs)
+  - Anthropic response: `content` is an array of typed blocks; find `type === 'text'` to get the text response
+  - Model IDs: `claude-haiku-4-5` (fast/cheap), `claude-sonnet-4-6` (higher quality)
 ---
