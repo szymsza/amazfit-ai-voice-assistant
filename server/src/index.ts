@@ -4,6 +4,7 @@ import express, { Request, Response } from 'express';
 import { transcribeAudio } from './stt';
 import { callLLM, type Message } from './llm';
 import { synthesizeSpeech } from './tts';
+import { truncateForTts } from './utils';
 import './providers/groq';
 import './providers/claude';
 import './providers/openai';
@@ -76,7 +77,11 @@ app.post('/api/ask', (req: Request, res: Response) => {
           // ([4-byte BE len][4-byte pad][opus payload] per frame).
           // Current wavToZeppOpus() conversion produces frames the watch rejects.
           // Need to figure out correct encoding parameters / frame structure.
-          return synthesizeSpeech(answer, body.groqKey, ttsVoice).then((opusBuffer) => {
+          const ttsText = truncateForTts(answer, 50);
+          if (ttsText !== answer) {
+            console.log(`[${new Date().toISOString()}] TTS truncated: ${answer.split(/\s+/).length} -> ${ttsText.split(/\s+/).length} words`);
+          }
+          return synthesizeSpeech(ttsText, body.groqKey, ttsVoice).then((opusBuffer) => {
             console.log(`[${new Date().toISOString()}] TTS -> ${opusBuffer.length}b OPUS`);
             res.json({
               audio: opusBuffer.toString('base64'),

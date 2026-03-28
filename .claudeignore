@@ -1,0 +1,15 @@
+# Compiled JS output (TypeScript sources are the source of truth)
+app/**/*.js
+app/setting/*.js
+
+# Zepp OS reference samples (not part of this project's code)
+zeppos-samples/
+
+# Build artifacts
+server/dist/
+app/dist/
+
+# Dependencies
+node_modules/
+app/node_modules/
+server/node_modules/

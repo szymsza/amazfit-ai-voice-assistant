@@ -308,9 +308,24 @@
         "Code is readable: clear variable names, no overly clever one-liners",
         "Typecheck passes"
       ],
-      "priority": 20,
+      "priority": 21,
       "passes": false,
       "notes": "Run this story last — after all features are implemented — so refactoring does not conflict with in-progress feature work."
+    },
+    {
+      "id": "US-021",
+      "title": "Spike: reduce audio transfer overhead — explore alternatives to base64",
+      "description": "As a developer, I want to explore options for transferring audio without base64 encoding to reduce payload size by ~33%.",
+      "acceptanceCriteria": [
+        "Investigate whether Zepp OS fetch() can send binary bodies (ArrayBuffer/Blob) without mangling Content-Type",
+        "Investigate multipart/form-data support in Zepp OS fetch() (was broken — see commit history)",
+        "Investigate whether a custom binary framing over fetch() is feasible (e.g. prepend a JSON header length + raw bytes)",
+        "Document findings and recommend an approach (or confirm base64/JSON is the pragmatic choice)",
+        "If a viable approach is found, implement it on both Side Service and server"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "Currently using JSON+base64 because Zepp OS fetch() does not support FormData multipart correctly. This spike should validate whether a more efficient transport is feasible."
     }
   ]
 }

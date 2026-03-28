@@ -10,7 +10,7 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - `@zos/media` (Recorder/Player) not in device-types — declared in `app/global.d.ts`
 - zosLoader module in `global.d.ts` uses `export { ... } from './page/gt/home/index.page.r.layout'` so layout types stay in sync automatically
 - App name: "AI Voice Assistant"
-- Server `/api/ask` uses `multipart/form-data` (multer memoryStorage): `audio` field = binary OPUS, `config` field = JSON string with all parameters. All previous `X-*` headers are gone.
+- Server `/api/ask` uses `application/json`: flat JSON body with `audio` (base64 OPUS string) + all config fields (`groqKey`, `llmProvider`, `llmModel`, `llmKey`, `ttsVoice`, `maxTurns`, `conversation`). Zepp OS `fetch()` does not support `FormData` multipart — it ignores the body and sends `application/json` with no content instead.
 - Server typecheck: `cd server && npm run typecheck`
 - BLE watch↔side messaging uses `@zeppos/zml/base-app` (device) + `@zeppos/zml/base-side` (phone). `BaseApp` sets up `globalData.messaging` and adds `request()` to app options; call from page via `getApp()._options.request as (data: ArrayBuffer) => Promise<Uint8Array>`
 - `Buffer`, `fetch`, `settings` globals are available in side service but absent from `@zeppos/device-types`; declared in `app/global.d.ts`

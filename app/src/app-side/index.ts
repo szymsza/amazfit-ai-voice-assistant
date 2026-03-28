@@ -96,10 +96,10 @@ try {
 
         const serverUrl = settings.settingsStorage.getItem(SERVER_URL_KEY) ?? DEFAULT_SERVER_URL
         const apiToken = settings.settingsStorage.getItem(API_TOKEN_KEY) ?? DEFAULT_API_TOKEN
-        const groqKey = settings.settingsStorage.getItem(GROQ_KEY_KEY) ?? ''
+        const groqKey = settings.settingsStorage.getItem(GROQ_KEY_KEY) ?? 'YOUR_GROQ_API_KEY'
         const llmProvider = settings.settingsStorage.getItem(LLM_PROVIDER_KEY) ?? 'claude'
         const llmModel = settings.settingsStorage.getItem(LLM_MODEL_KEY) ?? ''
-        const llmKey = settings.settingsStorage.getItem(LLM_KEY_KEY) ?? ''
+        const llmKey = settings.settingsStorage.getItem(LLM_KEY_KEY) ?? 'YOUR_ANTHROPIC_API_KEY'
         const ttsVoice = settings.settingsStorage.getItem(TTS_VOICE_KEY) ?? 'austin'
         const maxTurns = parseInt(
           settings.settingsStorage.getItem(MAX_TURNS_KEY) ?? String(DEFAULT_MAX_TURNS),
