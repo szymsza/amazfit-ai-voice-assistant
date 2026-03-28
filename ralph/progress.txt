@@ -83,3 +83,16 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - **Learnings for future iterations:**
   - When stories overlap in implementation scope (US-005 and US-006 both cover watch↔side BLE), it is valid to mark the later story as passing if the code already satisfies its acceptance criteria
 ---
+
+## 2026-03-28 - US-007
+- Created `server/src/stt.ts` with `transcribeAudio(audio: Buffer, groqApiKey: string): Promise<string>` function
+- Calls Groq Whisper API: POST https://api.groq.com/openai/v1/audio/transcriptions, multipart/form-data with `file` (OPUS blob) and `model: whisper-large-v3`
+- Updated `server/src/index.ts`: reads `X-Groq-Key` request header, calls STT, returns `{ question: transcription }` JSON or `{ error: "..." }` on failure (400 for missing key, 502 for STT failure)
+- Endpoint is now async (promise chain via `.then/.catch` — express doesn't require async handler)
+- Files changed: server/src/stt.ts (new), server/src/index.ts, ralph/prd.json, ralph/progress.txt
+- **Learnings for future iterations:**
+  - Groq Whisper multipart: `new Blob([buffer], { type: 'audio/ogg' })` + `form.append('file', blob, 'recording.opus')` — filename extension matters for format detection
+  - `fetch` and `FormData` are available globally in Node 18+ (no extra packages needed)
+  - Express handlers can use `.then/.catch` chains without being `async` functions — avoids unhandled rejection issues with older express versions
+  - Server response format changed from raw audio bytes to JSON `{ question }` — US-014 Side Service update must account for this (and US-013 will further change it to include audio+answer+conversation)
+---

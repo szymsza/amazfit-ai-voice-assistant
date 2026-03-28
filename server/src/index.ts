@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import { transcribeAudio } from './stt.js';
 
 const app = express();
 const PORT = process.env.PORT ?? '3000';
@@ -15,10 +16,26 @@ app.post('/api/ask', (req: Request, res: Response) => {
     return;
   }
 
+  const groqKey = req.headers['x-groq-key'];
+  if (!groqKey || typeof groqKey !== 'string') {
+    console.log(`[${new Date().toISOString()}] POST /api/ask -> 400 Missing X-Groq-Key`);
+    res.status(400).json({ error: 'Missing X-Groq-Key header' });
+    return;
+  }
+
   const audio = req.body as Buffer;
-  console.log(`[${new Date().toISOString()}] POST /api/ask -> 200 OK (${audio.length} bytes received, echoing back)`);
-  res.setHeader('Content-Type', 'application/octet-stream');
-  res.send(audio);
+  console.log(`[${new Date().toISOString()}] POST /api/ask -> transcribing ${audio.length} bytes`);
+
+  transcribeAudio(audio, groqKey)
+    .then((question) => {
+      console.log(`[${new Date().toISOString()}] STT -> "${question}"`);
+      res.json({ question });
+    })
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[${new Date().toISOString()}] STT failed: ${message}`);
+      res.status(502).json({ error: `STT failed: ${message}` });
+    });
 });
 
 app.listen(Number(PORT), () => {
