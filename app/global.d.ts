@@ -115,14 +115,17 @@ declare module '@zos/media' {
 
   interface MediaInstance {
     setFormat(codec: string, options: Record<string, unknown>): void
-    setSource(type: unknown, options: Record<string, unknown>): void
+    setSource(type: number, options: Record<string, unknown>): void
     prepare(options?: Record<string, unknown>): void
     start(): void
     stop(): void
     pause(): void
     resume(): void
-    addEventListener(event: string, callback: (result?: unknown) => void): void
-    removeEventListener(event: string, callback: (result?: unknown) => void): void
+    release(): void
+    addEventListener(event: number | string, callback: (result?: unknown) => void): void
+    removeEventListener(event: number | string, callback: (result?: unknown) => void): void
+    readonly event: { readonly PREPARE: number; readonly COMPLETE: number; readonly PLAY: number; readonly STOP: number; readonly PAUSE: number }
+    readonly source: { readonly FILE: number }
   }
 
   function create(type: number): MediaInstance

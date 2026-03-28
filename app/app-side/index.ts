@@ -1,5 +1,6 @@
 console.log('[side] module loaded')
 import { BaseSideService } from '@zeppos/zml/base-side'
+import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/index'
 
 const SERVER_URL_KEY = 'serverUrl'
 const API_TOKEN_KEY = 'apiToken'
@@ -26,40 +27,58 @@ function buildShakeResponse(shakeBuf: ZeppBuffer): ZeppBuffer {
   return resp
 }
 
-if (messaging?.peerSocket) {
-  messaging.peerSocket.addListener('message', (msg: unknown) => {
-    const buf = Buffer.from(msg as ArrayBuffer)
-    // Detect shake: flag=1 (byte 0), type=1 as uint16LE (bytes 2-3=0x01,0x00), min 16 bytes
-    if (buf.byteLength >= 16 && buf[0] === 1 && buf[2] === 1 && buf[3] === 0) {
-      console.log('[side] shake detected, sending response')
-      const resp = buildShakeResponse(buf)
-      messaging!.peerSocket.send(resp.buffer)
-    }
-  })
-  console.log('[side] shake handler registered')
-} else {
-  console.log('[side] messaging not available at module load')
+function shakeMessageHandler(msg: unknown): void {
+  const buf = Buffer.from(msg as ArrayBuffer)
+  // Detect shake: flag=1 (byte 0), type=1 as uint16LE (bytes 2-3=0x01,0x00), min 16 bytes
+  if (buf.byteLength >= 16 && buf[0] === 1 && buf[2] === 1 && buf[3] === 0) {
+    console.log('[side] shake detected, sending response')
+    const resp = buildShakeResponse(buf)
+    messaging!.peerSocket.send(resp.buffer)
+  }
 }
+
+let shakeHandlerRegistered = false
+
+function registerShakeHandler(): void {
+  if (!messaging?.peerSocket) return
+  // Remove before adding to avoid duplicates across hot reloads
+  messaging.peerSocket.removeListener('message', shakeMessageHandler)
+  messaging.peerSocket.addListener('message', shakeMessageHandler)
+  shakeHandlerRegistered = true
+  console.log('[side] shake handler registered')
+}
+
+// Register at module load for the initial connection
+registerShakeHandler()
 
 try {
   AppSideService(
     BaseSideService({
       onInit() {
         console.log('[side] onInit called')
+        registerShakeHandler()
       },
-      onRun() {},
+      onRun() {
+        // Re-register on each run to handle hot reload / device reconnect
+        registerShakeHandler()
+      },
       onDestroy() {
         console.log('[side] onDestroy called')
       },
       onRequest(req: unknown, res: (err: unknown, data?: unknown) => void): void {
-        console.log('[side] onRequest called, payload size:', (req as ArrayBuffer)?.byteLength ?? 'unknown')
-        const audioBuffer = req as ArrayBuffer
+        const b64 = req as string
+        console.log('[side] onRequest called, base64 length:', b64?.length ?? 'unknown')
+
+        // Decode base64 → binary (ZML can't send raw ArrayBuffer from watch side)
+        const audioBuffer = base64ToArrayBuffer(b64)
+        console.log('[side] decoded audio size:', audioBuffer.byteLength)
+
         const serverUrl = settings.settingsStorage.getItem(SERVER_URL_KEY) ?? DEFAULT_SERVER_URL
         const apiToken = settings.settingsStorage.getItem(API_TOKEN_KEY) ?? DEFAULT_API_TOKEN
 
         fetch(`${serverUrl}/api/ask`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${apiToken}` },
+          headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/octet-stream' },
           body: audioBuffer,
         })
           .then((response) => {
@@ -70,8 +89,10 @@ try {
             return response.arrayBuffer()
           })
           .then((audioResponse: ArrayBuffer) => {
-            console.log('[side] sending response, size:', audioResponse.byteLength)
-            res(null, Buffer.from(audioResponse))
+            // Base64-encode response so ZML can carry it back as a string
+            const b64Response = arrayBufferToBase64(audioResponse)
+            console.log('[side] sending response, base64 length:', b64Response.length)
+            res(null, b64Response)
           })
           .catch((err: unknown) => {
             console.error('[side] request failed:', String(err))
