@@ -16,11 +16,22 @@ declare const Buffer: {
   concat(buffers: ZeppBuffer[]): ZeppBuffer
 }
 
+// Blob global (available in phone-side service runtime)
+declare class Blob {
+  constructor(parts: Array<ArrayBuffer | Uint8Array | string>, options?: { type?: string }): void
+}
+
+// FormData global (available in phone-side service runtime)
+declare class FormData {
+  constructor(): void
+  append(name: string, value: Blob | string, filename?: string): void
+}
+
 // fetch global (available in phone-side service runtime)
 declare function fetch(url: string, init?: {
   method?: string
   headers?: Record<string, string>
-  body?: ArrayBuffer | Uint8Array | string | null
+  body?: ArrayBuffer | Uint8Array | string | FormData | null
 }): Promise<{
   ok: boolean
   status: number

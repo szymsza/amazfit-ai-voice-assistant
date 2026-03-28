@@ -1,11 +1,31 @@
 console.log('[side] module loaded')
 import { BaseSideService } from '@zeppos/zml/base-side'
-import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/index'
+import { base64ToArrayBuffer } from '../utils/index'
 
 const SERVER_URL_KEY = 'serverUrl'
 const API_TOKEN_KEY = 'apiToken'
+const GROQ_KEY_KEY = 'groqKey'
+const LLM_PROVIDER_KEY = 'llmProvider'
+const LLM_MODEL_KEY = 'llmModel'
+const LLM_KEY_KEY = 'llmKey'
+const TTS_VOICE_KEY = 'ttsVoice'
+const MAX_TURNS_KEY = 'maxTurns'
+
 const DEFAULT_SERVER_URL = 'http://localhost:3000'
 const DEFAULT_API_TOKEN = 'your_secret_token_here'
+const DEFAULT_MAX_TURNS = 10
+
+type Message = { role: string; content: string }
+
+type ServerResponse = {
+  audio: string
+  question: string
+  answer: string
+  conversation: Message[]
+}
+
+// Module-level conversation memory — resets when onDestroy is called (app closed)
+let conversation: Message[] = []
 
 // Register shake handler before ZML sets up its peerSocket listener.
 // ZML's onMessage() can't handle raw BIN shake packets, so we respond ourselves.
@@ -64,6 +84,8 @@ try {
       },
       onDestroy() {
         console.log('[side] onDestroy called')
+        // Reset conversation memory when the app is closed
+        conversation = []
       },
       onRequest(req: unknown, res: (err: unknown, data?: unknown) => void): void {
         const b64 = req as string
@@ -79,24 +101,57 @@ try {
 
         const serverUrl = settings.settingsStorage.getItem(SERVER_URL_KEY) ?? DEFAULT_SERVER_URL
         const apiToken = settings.settingsStorage.getItem(API_TOKEN_KEY) ?? DEFAULT_API_TOKEN
+        const groqKey = settings.settingsStorage.getItem(GROQ_KEY_KEY) ?? ''
+        const llmProvider = settings.settingsStorage.getItem(LLM_PROVIDER_KEY) ?? 'groq'
+        const llmModel = settings.settingsStorage.getItem(LLM_MODEL_KEY) ?? ''
+        const llmKey = settings.settingsStorage.getItem(LLM_KEY_KEY) ?? groqKey
+        const ttsVoice = settings.settingsStorage.getItem(TTS_VOICE_KEY) ?? 'austin'
+        const maxTurns = parseInt(
+          settings.settingsStorage.getItem(MAX_TURNS_KEY) ?? String(DEFAULT_MAX_TURNS),
+          10,
+        )
+
+        // Cap conversation history before sending
+        const cappedConversation = conversation.slice(-maxTurns)
+
+        const config = {
+          groqKey,
+          llmProvider,
+          llmModel,
+          llmKey,
+          ttsVoice,
+          maxTurns,
+          conversation: cappedConversation,
+        }
+
+        const form = new FormData()
+        form.append('audio', new Blob([audioBuffer], { type: 'audio/ogg' }), 'recording.opus')
+        form.append('config', JSON.stringify(config))
 
         fetch(`${serverUrl}/api/ask`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/octet-stream' },
-          body: audioBuffer,
+          headers: { Authorization: `Bearer ${apiToken}` },
+          body: form,
         })
           .then((response) => {
             console.log('[side] fetch response status:', response.status)
             if (!response.ok) {
               return Promise.reject(new Error(`Server error: ${response.status}`))
             }
-            return response.arrayBuffer()
+            return response.json()
           })
-          .then((audioResponse: ArrayBuffer) => {
-            // Base64-encode response so ZML can carry it back as a string
-            const b64Response = arrayBufferToBase64(audioResponse)
-            console.log('[side] sending response, base64 length:', b64Response.length)
-            res(null, b64Response)
+          .then((json: unknown) => {
+            const data = json as ServerResponse
+            // Update conversation memory with the full updated history from server
+            conversation = data.conversation
+            console.log(
+              '[side] conversation updated, turns:',
+              conversation.length,
+              'audio b64 length:',
+              data.audio.length,
+            )
+            // audio is already base64-encoded OPUS — pass directly to watch
+            res(null, data.audio)
           })
           .catch((err: unknown) => {
             console.error('[side] request failed:', String(err))

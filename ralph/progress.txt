@@ -195,3 +195,19 @@ Started: Ne 22. března 2026, 13:31:24 CET
   - OpenAI chat completions API is identical in shape to Groq's API (both OpenAI-compatible); provider code is nearly identical
   - OpenAI provider name is `'openai'` (not `'chatgpt'`) to keep it consistent with the SDK naming
 ---
+
+## 2026-03-28 - US-014
+- Updated `app/src/app-side/index.ts` to use `FormData` + `Blob` for POST body and parse JSON response
+- Added module-level `conversation: Message[]` array; updated on each server response, reset in `onDestroy`
+- Added settings keys: `groqKey`, `llmProvider`, `llmModel`, `llmKey`, `ttsVoice`, `maxTurns`
+- Conversation capped to `maxTurns` (default: 10) before each send; server-returned `conversation` replaces local array
+- Watch interface unchanged: watch sends base64 audio string, receives base64 audio string back
+- Added `Blob` and `FormData` type declarations to `app/src/global.d.ts`; updated `fetch` body type to include `FormData`
+- Removed unused `arrayBufferToBase64` import (audio from server is already base64-encoded in JSON response)
+- Files changed: app/src/app-side/index.ts, app/app-side/index.js (compiled), app/src/global.d.ts, ralph/prd.json, ralph/progress.txt
+- **Learnings for future iterations:**
+  - `Blob` and `FormData` are available in side service phone runtime but need manual declarations in `global.d.ts`
+  - Server response `audio` field is already base64-encoded OPUS — Side Service passes it directly to watch; no re-encoding needed
+  - `conversation` should be capped before sending (not just rely on server capping) to avoid large payloads
+  - Settings keys for config: `groqKey`, `llmProvider`, `llmModel`, `llmKey`, `ttsVoice`, `maxTurns` (stored as strings)
+---

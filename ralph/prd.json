@@ -213,7 +213,7 @@
         "Typecheck passes"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": "DEPENDS ON US-013 response format change: US-013 changes the server response from raw audio bytes to JSON ({ audio, question, answer, conversation }). This story MUST update the Side Service to parse that JSON response — extract the audio bytes for playback and the conversation array for memory. The current side service does response.arrayBuffer() which will break after US-013 lands. ALSO: the server /api/ask endpoint now expects multipart/form-data (not raw binary + headers). The Side Service must build a FormData with two fields: 'audio' (binary OPUS Blob) and 'config' (JSON string with { groqKey, llmProvider, llmModel, llmKey, ttsVoice, maxTurns, conversation }). All the X-* headers are gone."
     },
     {
