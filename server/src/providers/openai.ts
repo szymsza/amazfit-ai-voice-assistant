@@ -1,4 +1,4 @@
-import { registerProvider, type Message } from '../llm.js';
+import { registerProvider, type Message } from '../llm';
 
 const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
 const DEFAULT_MODEL = 'gpt-4o-mini';

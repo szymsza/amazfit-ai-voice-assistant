@@ -1,4 +1,4 @@
-import { registerProvider, type Message } from '../llm.js';
+import { registerProvider, type Message } from '../llm';
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const DEFAULT_MODEL = 'moonshotai/kimi-k2-instruct';

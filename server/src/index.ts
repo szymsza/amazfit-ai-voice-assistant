@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { transcribeAudio } from './stt.js';
-import { callLLM, type Message } from './llm.js';
-import { synthesizeSpeech } from './tts.js';
-import './providers/groq.js';
-import './providers/claude.js';
-import './providers/openai.js';
+import { transcribeAudio } from './stt';
+import { callLLM, type Message } from './llm';
+import { synthesizeSpeech } from './tts';
+import './providers/groq';
+import './providers/claude';
+import './providers/openai';
 
 const app = express();
 const PORT = process.env.PORT ?? '3000';
