@@ -77,17 +77,18 @@ function initMediaInstances(): void {
   }
 
   player.addEventListener(player.event.PREPARE, (result: unknown) => {
-    logger.debug('PREPARE result=' + String(result))
+    logger.debug('PREPARE event fired, result=' + String(result))
     if (result) {
+      logger.debug('prepare succeeded, calling start()')
       player!.start()
     } else {
-      logger.error('prepare failed')
+      logger.error('prepare failed (result=' + String(result) + '), going idle')
       setState(AppState.Idle)
     }
   })
 
   player.addEventListener(player.event.COMPLETE, () => {
-    logger.debug('COMPLETE')
+    logger.debug('COMPLETE event fired, calling stop()')
     player!.stop()
     setState(AppState.Idle)
   })
@@ -100,9 +101,12 @@ function startPlayback(fileName: string): void {
     return
   }
   logger.debug('startPlayback: ' + fileName)
-  player.setSource(player.source.FILE, { file: fileName })
-  player.prepare()
+  const setSourceResult = player.setSource(player.source.FILE, { file: fileName })
+  logger.debug('setSource result=' + String(setSourceResult))
+  const prepareResult = player.prepare()
+  logger.debug('prepare() called, result=' + String(prepareResult))
   setState(AppState.Playing)
+  setTimeout(() => { if (appState === AppState.Playing) { logger.warn('playback watchdog fired: no PREPARE event, assuming simulator'); setState(AppState.Idle) } }, 500)
 }
 
 function sendToSideService(): void {
