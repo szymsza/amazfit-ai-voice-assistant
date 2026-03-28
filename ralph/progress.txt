@@ -157,6 +157,19 @@ Started: Ne 22. března 2026, 13:31:24 CET
   - ffmpeg must be installed on the server host (`apt install ffmpeg` or equivalent)
 ---
 
+## 2026-03-28 - US-013
+- Wired up full STT → LLM → TTS pipeline in `server/src/index.ts`
+- Request: raw audio body + headers: `X-Groq-Key` (STT+TTS), `X-LLM-Provider` (default: groq), `X-LLM-Key` (default: groq key), `X-LLM-Model`, `X-TTS-Voice` (default: austin), `X-Max-Turns` (default: 10), `X-Conversation` (base64-encoded JSON conversation array)
+- Response JSON: `{ audio: <base64 OPUS>, question: string, answer: string, conversation: Message[] }`
+- Each pipeline stage has its own error path: STT failure → 502 STT error; LLM/TTS failure → 502 Pipeline error
+- Files changed: server/src/index.ts, ralph/prd.json, ralph/progress.txt
+- **Learnings for future iterations:**
+  - Conversation history is passed as a base64-encoded JSON string in `X-Conversation` header (binary body prevents JSON body)
+  - Audio in response is base64-encoded OPUS bytes inside a JSON envelope — Side Service (US-014) must decode base64 and extract `conversation` for memory
+  - Promise chain (`.then/.catch`) used instead of `async/await` to stay consistent with existing handler style
+
+---
+
 ## 2026-03-28 - US-011
 - Created `server/src/providers/openai.ts` — OpenAI ChatGPT LLM provider
 - POSTs to `https://api.openai.com/v1/chat/completions` with Bearer auth
