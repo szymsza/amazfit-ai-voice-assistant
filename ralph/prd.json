@@ -214,7 +214,7 @@
       ],
       "priority": 14,
       "passes": false,
-      "notes": ""
+      "notes": "DEPENDS ON US-013 response format change: US-013 changes the server response from raw audio bytes to JSON ({ audio, question, answer, conversation }). This story MUST update the Side Service to parse that JSON response — extract the audio bytes for playback and the conversation array for memory. The current side service does response.arrayBuffer() which will break after US-013 lands."
     },
     {
       "id": "US-015",

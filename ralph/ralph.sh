@@ -88,12 +88,17 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "==============================================================="
 
   # Run the selected tool with the ralph prompt
+  TMPFILE=$(mktemp)
   if [[ "$TOOL" == "amp" ]]; then
-    OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+    cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 | tee "$TMPFILE" || true
   else
     # Claude Code: use --dangerously-skip-permissions for autonomous operation, --print for output
-    OUTPUT=$(CLAUDE_CONFIG_DIR=~/.claude-personal claude --dangerously-skip-permissions --print -p "$(cat "$SCRIPT_DIR/CLAUDE.md")" 2>&1 | tee /dev/stderr) || true
+    # Combine root project CLAUDE.md + ralph agent instructions as the system prompt
+    COMBINED_PROMPT="$(cat "$SCRIPT_DIR/../CLAUDE.md")"$'\n\n---\n\n'"$(cat "$SCRIPT_DIR/CLAUDE.md")"
+    CLAUDE_CONFIG_DIR=~/.claude-personal claude --dangerously-skip-permissions --print -p "$COMBINED_PROMPT" 2>&1 | tee "$TMPFILE" || true
   fi
+  OUTPUT=$(cat "$TMPFILE")
+  rm -f "$TMPFILE"
   
   # Check for completion signal
   if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then

@@ -25,12 +25,12 @@ const enum AppState {
 }
 
 const STATE_LABELS: Record<AppState, string> = {
-  [AppState.Idle]: 'Tap to record',
-  [AppState.Recording]: 'Recording...',
-  [AppState.Sending]: 'Sending...',
-  [AppState.Waiting]: 'Waiting...',
-  [AppState.Receiving]: 'Receiving...',
-  [AppState.Playing]: 'Playing...',
+  [AppState.Idle]: 'Tap to ask a question',
+  [AppState.Recording]: 'Talk and then tap',
+  [AppState.Sending]: 'Processing...',
+  [AppState.Waiting]: 'Thinking...',
+  [AppState.Receiving]: 'Crafting the response...',
+  [AppState.Playing]: 'Your response',
 }
 
 const BTN_COLORS: Record<AppState, number> = {
@@ -58,6 +58,7 @@ let stateTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let canvasWidget: any = null
 let requestFn: ((data: ArrayBuffer) => Promise<Uint8Array>) | null = null
+let prepareReceived = false
 
 function drawBackground(color: number): void {
   if (!canvasWidget) return
@@ -84,6 +85,7 @@ function initMediaInstances(): void {
   }
 
   player.addEventListener(player.event.PREPARE, (result: unknown) => {
+    prepareReceived = true
     logger.debug('PREPARE event fired, result=' + String(result))
     if (result) {
       logger.debug('prepare succeeded, calling start()')
@@ -112,8 +114,9 @@ function startPlayback(fileName: string): void {
   logger.debug('setSource result=' + String(setSourceResult))
   const prepareResult = player.prepare()
   logger.debug('prepare() called, result=' + String(prepareResult))
+  prepareReceived = false
   setState(AppState.Playing)
-  setTimeout(() => { if (appState === AppState.Playing) { logger.warn('playback watchdog fired: no PREPARE event, assuming simulator'); setState(AppState.Idle) } }, 500)
+  setTimeout(() => { if (appState === AppState.Playing && !prepareReceived) { logger.warn('playback watchdog fired: no PREPARE event, assuming simulator'); setState(AppState.Idle) } }, 500)
 }
 
 function sendToSideService(): void {
