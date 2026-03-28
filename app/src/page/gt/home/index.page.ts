@@ -1,5 +1,6 @@
 import * as hmUI from '@zos/ui'
 import { log as Logger } from '@zos/utils'
+import { scrollTo } from '@zos/page'
 import { create, id as mediaId, codec as mediaCodec } from '@zos/media'
 import type { MediaInstance } from '@zos/media'
 import { openSync, readSync, writeSync, closeSync, statSync, O_RDONLY, O_RDWR, O_CREAT, O_TRUNC } from '@zos/fs'
@@ -11,6 +12,8 @@ import {
   DEVICE_WIDTH,
   DEVICE_HEIGHT,
   STATE_TEXT_STYLE,
+  QUESTION_TEXT_STYLE,
+  ANSWER_TEXT_STYLE,
 } from 'zosLoader:./index.page.[pf].layout.js'
 
 const logger = Logger.getLogger('ai-voice-assistant')
@@ -22,6 +25,7 @@ const enum AppState {
   Waiting = 'waiting',
   Receiving = 'receiving',
   Playing = 'playing',
+  ReadingResponse = 'reading',
 }
 
 const STATE_LABELS: Record<AppState, string> = {
@@ -31,6 +35,7 @@ const STATE_LABELS: Record<AppState, string> = {
   [AppState.Waiting]: 'Thinking...',
   [AppState.Receiving]: 'Crafting the response...',
   [AppState.Playing]: 'Your response',
+  [AppState.ReadingResponse]: '',
 }
 
 const BTN_COLORS: Record<AppState, number> = {
@@ -39,7 +44,8 @@ const BTN_COLORS: Record<AppState, number> = {
   [AppState.Sending]: 0x888888,
   [AppState.Waiting]: 0xffa500,
   [AppState.Receiving]: 0x4caf50,
-  [AppState.Playing]: 0x2196f3,
+  [AppState.Playing]: 0x000000,
+  [AppState.ReadingResponse]: 0x000000,
 }
 
 // data:// paths used by Recorder/Player APIs
@@ -59,6 +65,10 @@ let stateTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
 let canvasWidget: any = null
 let requestFn: ((data: ArrayBuffer) => Promise<Uint8Array>) | null = null
 let prepareReceived = false
+let questionTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
+let answerTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
+let questionText = ''
+let answerText = ''
 
 function drawBackground(color: number): void {
   if (!canvasWidget) return
@@ -68,7 +78,19 @@ function drawBackground(color: number): void {
 
 function setState(newState: AppState): void {
   appState = newState
-  stateTextWidget?.setProperty(hmUI.prop.TEXT, STATE_LABELS[newState])
+  const showText = newState === AppState.Playing || newState === AppState.ReadingResponse
+  if (showText) {
+    stateTextWidget?.setProperty(hmUI.prop.TEXT, '')
+    questionTextWidget?.setProperty(hmUI.prop.TEXT, questionText)
+    answerTextWidget?.setProperty(hmUI.prop.TEXT, answerText)
+    questionTextWidget?.setProperty(hmUI.prop.VISIBLE, 1)
+    answerTextWidget?.setProperty(hmUI.prop.VISIBLE, 1)
+  } else {
+    stateTextWidget?.setProperty(hmUI.prop.TEXT, STATE_LABELS[newState])
+    questionTextWidget?.setProperty(hmUI.prop.VISIBLE, 0)
+    answerTextWidget?.setProperty(hmUI.prop.VISIBLE, 0)
+    scrollTo(0)
+  }
   drawBackground(BTN_COLORS[newState])
 }
 
@@ -99,7 +121,7 @@ function initMediaInstances(): void {
   player.addEventListener(player.event.COMPLETE, () => {
     logger.debug('COMPLETE event fired, calling stop()')
     player!.stop()
-    setState(AppState.Idle)
+    setState(AppState.ReadingResponse)
   })
 }
 
@@ -141,7 +163,10 @@ function sendToSideService(): void {
   requestFn!(b64Audio as unknown as ArrayBuffer)
     .then((responseData: unknown) => {
       setState(AppState.Receiving)
-      const ab = base64ToArrayBuffer(responseData as string)
+      const resp = JSON.parse(responseData as string) as { audio: string; question: string; answer: string }
+      questionText = resp.question ?? ''
+      answerText = resp.answer ?? ''
+      const ab = base64ToArrayBuffer(resp.audio)
       logger.debug('got response, size=' + ab.byteLength)
       const wfd = openSync({ path: RESPONSE_FILE, flag: O_RDWR | O_CREAT | O_TRUNC })
       writeSync({ fd: wfd, buffer: ab })
@@ -186,7 +211,9 @@ function startRecording(): void {
 }
 
 function onButtonPress(): void {
-  if (appState === AppState.Idle) {
+  if (appState === AppState.Idle || appState === AppState.ReadingResponse) {
+    questionText = ''
+    answerText = ''
     startRecording()
   } else if (appState === AppState.Recording) {
     stopRecording()
@@ -213,6 +240,10 @@ Page(BasePage({
     drawBackground(BTN_COLORS[AppState.Idle])
     canvasWidget.addEventListener(hmUI.event.CLICK_UP, onButtonPress)
     stateTextWidget = hmUI.createWidget(hmUI.widget.TEXT, STATE_TEXT_STYLE)
+    questionTextWidget = hmUI.createWidget(hmUI.widget.TEXT, QUESTION_TEXT_STYLE)
+    questionTextWidget.setProperty(hmUI.prop.VISIBLE, 0)
+    answerTextWidget = hmUI.createWidget(hmUI.widget.TEXT, ANSWER_TEXT_STYLE)
+    answerTextWidget.setProperty(hmUI.prop.VISIBLE, 0)
   },
 
   onDestroy() {
@@ -227,6 +258,10 @@ Page(BasePage({
       try { player.release() } catch (_) { /* ignore */ }
       player = null
     }
+    questionTextWidget = null
+    answerTextWidget = null
+    questionText = ''
+    answerText = ''
     stateTextWidget = null
     canvasWidget = null
     requestFn = null

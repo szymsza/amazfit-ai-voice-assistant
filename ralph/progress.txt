@@ -211,3 +211,21 @@ Started: Ne 22. března 2026, 13:31:24 CET
   - `conversation` should be capped before sending (not just rely on server capping) to avoid large payloads
   - Settings keys for config: `groqKey`, `llmProvider`, `llmModel`, `llmKey`, `ttsVoice`, `maxTurns` (stored as strings)
 ---
+
+## 2026-03-28 - US-015
+- Added question and answer text display to watch UI after server responds
+- Added `ReadingResponse` state: audio playback ends → shows text until user taps (instead of jumping to Idle)
+- Side service now sends `JSON.stringify({ audio, question, answer })` instead of just `data.audio`
+- Watch page parses JSON response to extract question/answer before writing audio file
+- Added `QUESTION_TEXT_STYLE` (grey, 20px, y=30, h=165) and `ANSWER_TEXT_STYLE` (white, 22px, y=205, h=700) to layout
+- Answer widget extends to y=905 (beyond 480px screen) — natural page scrollability for long responses
+- Both text widgets created in `build()` with `VISIBLE=0`; shown/hidden via `setState()` transitions
+- `scrollTo(0)` called on non-text states to reset scroll position
+- Changed `BTN_COLORS[Playing]` to `0x000000` (black) for text readability
+- Files changed: app/src/app-side/index.ts, app/src/page/gt/home/index.page.ts, app/src/page/gt/home/index.page.r.layout.ts, app/src/global.d.ts, app/page/gt/home/index.page.js, app/page/gt/home/index.page.r.layout.js, ralph/prd.json, ralph/progress.txt
+- **Learnings for future iterations:**
+  - `hmUI.prop.VISIBLE` with value `0`/`1` controls widget visibility; call `scrollTo(0)` from `@zos/page` to reset scroll on state transitions
+  - Side service response JSON `{ audio, question, answer }` pattern — watch parses it, audio goes to file, text goes to widgets
+  - Add `ReadingResponse` state when audio ends but you want the user to keep seeing text (better UX than auto-Idle)
+  - CANVAS widget height (480px) sets minimum page height; answer TEXT widget at y=205 h=700 extends page to 905px → automatic page scroll without calling `setScrollMode`
+---

@@ -26,3 +26,33 @@ export const STATE_TEXT_STYLE = {
   text: 'Tap to ask a question',
   enable: false,
 }
+
+/** Transcribed question text - shown during Playing/ReadingResponse states */
+export const QUESTION_TEXT_STYLE = {
+  x: px(20),
+  y: 30,
+  w: DEVICE_WIDTH - px(40),
+  h: 165,
+  color: 0xaaaaaa,
+  text_size: px(20),
+  align_h: hmUI.align.LEFT,
+  align_v: hmUI.align.TOP,
+  text_style: hmUI.text_style.WRAP,
+  text: '',
+  enable: false,
+}
+
+/** AI response text - shown during Playing/ReadingResponse states; extends off screen for scrollability */
+export const ANSWER_TEXT_STYLE = {
+  x: px(20),
+  y: 205,
+  w: DEVICE_WIDTH - px(40),
+  h: 700,
+  color: 0xffffff,
+  text_size: px(22),
+  align_h: hmUI.align.LEFT,
+  align_v: hmUI.align.TOP,
+  text_style: hmUI.text_style.WRAP,
+  text: '',
+  enable: false,
+}

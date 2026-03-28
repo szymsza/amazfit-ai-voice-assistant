@@ -124,7 +124,7 @@ try {
                 conversation = data.conversation;
                 console.log('[side] conversation updated, turns:', conversation.length, 'audio b64 length:', data.audio.length);
                 // audio is already base64-encoded OPUS — pass directly to watch
-                res(null, data.audio);
+                res(null, JSON.stringify({ audio: data.audio, question: data.question, answer: data.answer }));
             })
                 .catch((err) => {
                 console.error('[side] request failed:', String(err));

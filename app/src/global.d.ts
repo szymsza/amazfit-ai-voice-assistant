@@ -103,7 +103,7 @@ declare module '@zeppos/zml/base-side' {
 
 // Zepp OS build-time loader: re-export types from the actual round-screen layout file
 declare module 'zosLoader:./index.page.[pf].layout.js' {
-  export { CANVAS_STYLE, STATE_TEXT_STYLE, DEVICE_WIDTH, DEVICE_HEIGHT } from './page/gt/home/index.page.r.layout'
+  export { CANVAS_STYLE, STATE_TEXT_STYLE, QUESTION_TEXT_STYLE, ANSWER_TEXT_STYLE, DEVICE_WIDTH, DEVICE_HEIGHT } from './page/gt/home/index.page.r.layout'
 }
 
 // Add CLICK_AREA widget (valid Zepp OS widget missing from @zeppos/device-types)
