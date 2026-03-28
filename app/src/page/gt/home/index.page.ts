@@ -7,9 +7,9 @@ import { getTestAudioBuffer } from '../../../utils/testAudio'
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../../../utils/index'
 import { BasePage, BasePageThis } from '@zeppos/zml/base-page'
 import {
-  RING_STYLE,
-  BTN_STYLE,
-  CLICK_AREA_STYLE,
+  CANVAS_STYLE,
+  DEVICE_WIDTH,
+  DEVICE_HEIGHT,
   STATE_TEXT_STYLE,
 } from 'zosLoader:./index.page.[pf].layout.js'
 
@@ -34,7 +34,7 @@ const STATE_LABELS: Record<AppState, string> = {
 }
 
 const BTN_COLORS: Record<AppState, number> = {
-  [AppState.Idle]: 0xe63946,
+  [AppState.Idle]: 0x000000,
   [AppState.Recording]: 0xff2244,
   [AppState.Sending]: 0x888888,
   [AppState.Waiting]: 0xffa500,
@@ -55,13 +55,20 @@ let appState = AppState.Idle
 let recorder: MediaInstance | null = null
 let player: MediaInstance | null = null
 let stateTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
-let btnWidget: ReturnType<typeof hmUI.createWidget> | null = null
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let canvasWidget: any = null
 let requestFn: ((data: ArrayBuffer) => Promise<Uint8Array>) | null = null
+
+function drawBackground(color: number): void {
+  if (!canvasWidget) return
+  canvasWidget.clear({ x: 0, y: 0, w: DEVICE_WIDTH, h: DEVICE_HEIGHT })
+  canvasWidget.drawFill({ x1: 0, y1: 0, x2: DEVICE_WIDTH, y2: DEVICE_HEIGHT, color })
+}
 
 function setState(newState: AppState): void {
   appState = newState
   stateTextWidget?.setProperty(hmUI.prop.TEXT, STATE_LABELS[newState])
-  btnWidget?.setProperty(hmUI.prop.COLOR, BTN_COLORS[newState])
+  drawBackground(BTN_COLORS[newState])
 }
 
 function initMediaInstances(): void {
@@ -199,13 +206,10 @@ Page(BasePage({
   },
 
   build() {
-    hmUI.createWidget(hmUI.widget.CIRCLE, RING_STYLE)
-    btnWidget = hmUI.createWidget(hmUI.widget.CIRCLE, BTN_STYLE)
+    canvasWidget = hmUI.createWidget(hmUI.widget.CANVAS, CANVAS_STYLE)
+    drawBackground(BTN_COLORS[AppState.Idle])
+    canvasWidget.addEventListener(hmUI.event.CLICK_UP, onButtonPress)
     stateTextWidget = hmUI.createWidget(hmUI.widget.TEXT, STATE_TEXT_STYLE)
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      ...CLICK_AREA_STYLE,
-      click_func: onButtonPress,
-    })
   },
 
   onDestroy() {
@@ -221,7 +225,7 @@ Page(BasePage({
       player = null
     }
     stateTextWidget = null
-    btnWidget = null
+    canvasWidget = null
     requestFn = null
     appState = AppState.Idle
   },

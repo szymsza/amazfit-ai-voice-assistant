@@ -4,37 +4,18 @@ import { px } from '@zos/utils'
 
 export const { width: DEVICE_WIDTH, height: DEVICE_HEIGHT } = getDeviceInfo()
 
-const CX = DEVICE_WIDTH / 2
-const CY = DEVICE_HEIGHT / 2
-
-/** Background circle behind the record button */
-export const RING_STYLE = {
-  cx: CX,
-  cy: CY + px(20),
-  r: px(110),
-  color: 0x333333,
+/** Full-screen canvas — colored background + click target */
+export const CANVAS_STYLE = {
+  x: 0,
+  y: 0,
+  w: DEVICE_WIDTH,
+  h: DEVICE_HEIGHT,
 }
 
-/** The record button circle (changes color per state) */
-export const BTN_STYLE = {
-  cx: CX,
-  cy: CY + px(20),
-  r: px(90),
-  color: 0xe63946,
-}
-
-/** Clickable area over the button */
-export const CLICK_AREA_STYLE = {
-  x: CX - px(110),
-  y: CY + px(20) - px(110),
-  w: px(220),
-  h: px(220),
-}
-
-/** State label shown above the button */
+/** State label centered on screen */
 export const STATE_TEXT_STYLE = {
   x: px(40),
-  y: px(100),
+  y: DEVICE_HEIGHT / 2 - px(30),
   w: DEVICE_WIDTH - px(80),
   h: px(60),
   color: 0xffffff,
