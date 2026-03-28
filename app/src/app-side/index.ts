@@ -1,6 +1,5 @@
 console.log('[side] module loaded')
 import { BaseSideService } from '@zeppos/zml/base-side'
-import { base64ToArrayBuffer } from '../utils/index'
 
 const SERVER_URL_KEY = 'serverUrl'
 const API_TOKEN_KEY = 'apiToken'
@@ -91,10 +90,6 @@ try {
         const b64 = req as string
         console.log('[side] onRequest called, base64 length:', b64?.length ?? 'unknown')
 
-        // Decode base64 → binary (ZML can't send raw ArrayBuffer from watch side)
-        const audioBuffer = base64ToArrayBuffer(b64)
-        console.log('[side] decoded audio size:', audioBuffer.byteLength)
-
         // Audio received by phone — notify watch to transition to Waiting
         const call = (this as unknown as { call: (d: { method: string; params: Record<string, unknown> }) => void }).call.bind(this)
         call({ method: 'stateUpdate', params: { state: 'waiting' } })
@@ -102,9 +97,9 @@ try {
         const serverUrl = settings.settingsStorage.getItem(SERVER_URL_KEY) ?? DEFAULT_SERVER_URL
         const apiToken = settings.settingsStorage.getItem(API_TOKEN_KEY) ?? DEFAULT_API_TOKEN
         const groqKey = settings.settingsStorage.getItem(GROQ_KEY_KEY) ?? ''
-        const llmProvider = settings.settingsStorage.getItem(LLM_PROVIDER_KEY) ?? 'groq'
+        const llmProvider = settings.settingsStorage.getItem(LLM_PROVIDER_KEY) ?? 'claude'
         const llmModel = settings.settingsStorage.getItem(LLM_MODEL_KEY) ?? ''
-        const llmKey = settings.settingsStorage.getItem(LLM_KEY_KEY) ?? groqKey
+        const llmKey = settings.settingsStorage.getItem(LLM_KEY_KEY) ?? ''
         const ttsVoice = settings.settingsStorage.getItem(TTS_VOICE_KEY) ?? 'austin'
         const maxTurns = parseInt(
           settings.settingsStorage.getItem(MAX_TURNS_KEY) ?? String(DEFAULT_MAX_TURNS),
@@ -114,24 +109,19 @@ try {
         // Cap conversation history before sending
         const cappedConversation = conversation.slice(-maxTurns)
 
-        const config = {
-          groqKey,
-          llmProvider,
-          llmModel,
-          llmKey,
-          ttsVoice,
-          maxTurns,
-          conversation: cappedConversation,
-        }
-
-        const form = new FormData()
-        form.append('audio', new Blob([audioBuffer], { type: 'audio/ogg' }), 'recording.opus')
-        form.append('config', JSON.stringify(config))
-
         fetch(`${serverUrl}/api/ask`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${apiToken}` },
-          body: form,
+          headers: { Authorization: `Bearer ${apiToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio: b64,
+            groqKey,
+            llmProvider,
+            llmModel,
+            llmKey,
+            ttsVoice,
+            maxTurns,
+            conversation: cappedConversation,
+          }),
         })
           .then((response) => {
             console.log('[side] fetch response status:', response.status)
