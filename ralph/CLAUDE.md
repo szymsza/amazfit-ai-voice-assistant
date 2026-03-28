@@ -112,3 +112,4 @@ If there are still stories with `passes: false`, end your response normally (ano
 - **Server typecheck:** `cd server && npm run typecheck` (configure similarly when creating the server)
 - **Zepp OS:** The watch app targets Amazfit Balance (round screen 480×480). Page files use `.ts` extension; the zeus build tool compiles them. API level 4.0.
 - **Missing Zepp OS types:** `@zos/media` and other modules not covered by `@zeppos/device-types` must be declared in `app/global.d.ts`.
+- **Server `/api/ask` uses multipart/form-data:** two fields — `audio` (binary OPUS) and `config` (JSON string). `config` shape: `{ groqKey, llmProvider?, llmModel?, llmKey?, ttsVoice?, maxTurns?, conversation? }`. Parsed with `multer({ storage: multer.memoryStorage() })`. The Side Service (US-014) must build a `FormData` with these two fields instead of sending raw binary with headers.

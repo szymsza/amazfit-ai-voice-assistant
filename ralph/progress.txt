@@ -10,7 +10,7 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - `@zos/media` (Recorder/Player) not in device-types — declared in `app/global.d.ts`
 - zosLoader module in `global.d.ts` uses `export { ... } from './page/gt/home/index.page.r.layout'` so layout types stay in sync automatically
 - App name: "AI Voice Assistant"
-- Server uses `express.raw({ type: '*/*', limit: '10mb' })` to receive binary audio as `Buffer`
+- Server `/api/ask` uses `multipart/form-data` (multer memoryStorage): `audio` field = binary OPUS, `config` field = JSON string with all parameters. All previous `X-*` headers are gone.
 - Server typecheck: `cd server && npm run typecheck`
 - BLE watch↔side messaging uses `@zeppos/zml/base-app` (device) + `@zeppos/zml/base-side` (phone). `BaseApp` sets up `globalData.messaging` and adds `request()` to app options; call from page via `getApp()._options.request as (data: ArrayBuffer) => Promise<Uint8Array>`
 - `Buffer`, `fetch`, `settings` globals are available in side service but absent from `@zeppos/device-types`; declared in `app/global.d.ts`
@@ -86,6 +86,19 @@ Started: Ne 22. března 2026, 13:31:24 CET
 - **Learnings for future iterations:**
   - When stories overlap in implementation scope (US-005 and US-006 both cover watch↔side BLE), it is valid to mark the later story as passing if the code already satisfies its acceptance criteria
 - Anthropic API: POST to `https://api.anthropic.com/v1/messages`; requires `x-api-key` + `anthropic-version: 2023-06-01` headers + `max_tokens`; response shape: `{ content: [{ type: 'text', text: string }] }`
+
+---
+
+## 2026-03-28 - Server multipart refactor (human-driven, pre US-014)
+- Replaced `express.raw` + X-* headers with `multipart/form-data` using multer (memoryStorage)
+- `audio` field: binary OPUS bytes; `config` field: JSON string `{ groqKey, llmProvider?, llmModel?, llmKey?, ttsVoice?, maxTurns?, conversation? }`
+- Added `RequestConfig` interface; all config parsed from `JSON.parse(req.body.config)`
+- Removed `express.raw` middleware; added `multer` dependency
+- Files changed: server/src/index.ts, server/package.json, ralph/prd.json, ralph/CLAUDE.md, ralph/progress.txt
+- **Learnings for future iterations:**
+  - Side Service (US-014) must send `FormData` with `audio` (Blob) and `config` (JSON string) — no more raw binary body or X-* headers
+  - `FormData` and `Blob` are available in the Zepp OS side service environment (phone JS runtime)
+  - multer `upload.fields([...])` populates `req.files` as `Record<string, Express.Multer.File[]>`; audio bytes are at `req.files['audio'][0].buffer`
 
 ---
 

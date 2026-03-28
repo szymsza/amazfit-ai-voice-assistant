@@ -95,7 +95,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     # Claude Code: use --dangerously-skip-permissions for autonomous operation, --print for output
     # Combine root project CLAUDE.md + ralph agent instructions as the system prompt
     COMBINED_PROMPT="$(cat "$SCRIPT_DIR/../CLAUDE.md")"$'\n\n---\n\n'"$(cat "$SCRIPT_DIR/CLAUDE.md")"
-    CLAUDE_CONFIG_DIR=~/.claude-personal claude --dangerously-skip-permissions --print -p "$COMBINED_PROMPT" 2>&1 | tee "$TMPFILE" || true
+    CLAUDE_CONFIG_DIR=~/.claude-personal claude --dangerously-skip-permissions --verbose --print -p "$COMBINED_PROMPT" 2>&1 | tee "$TMPFILE" || true
   fi
   OUTPUT=$(cat "$TMPFILE")
   rm -f "$TMPFILE"
