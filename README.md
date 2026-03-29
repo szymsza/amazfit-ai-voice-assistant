@@ -56,3 +56,41 @@ Copy `server/.env.example` to `server/.env` and set:
 - `PORT` — port to listen on (default 3000)
 
 For simulator testing, update `DEFAULT_SERVER_URL` in `app/src/app-side/index.ts` to your machine's LAN IP.
+
+## Deploying to VPS with PM2
+
+### Do once (one-time setup):
+```bash
+# Install PM2 globally
+cd server && npm run pm2:install
+
+# Make PM2 auto-start on VPS reboot
+npm run pm2:setup
+```
+
+### Regular commands:
+```bash
+# Build and start server
+cd server && npm run build && npm run pm2:start
+
+# Check logs
+npm run pm2:logs
+
+# Manage the server
+npm run pm2:restart   # restart the server
+npm run pm2:stop      # stop the server
+```
+
+PM2 will automatically restart the server if it crashes and restore it on VPS reboot.
+
+### VPS environment & proxy:
+Copy `server/.env.example` to `server/.env` and set `API_TOKEN` and `PORT` (use a unique port like 3001 to avoid conflicts). Then create an Apache VirtualHost to proxy requests:
+```apache
+<VirtualHost *:80>
+    ServerName api.yourdomain.com
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:3001/
+    ProxyPassReverse / http://localhost:3001/
+</VirtualHost>
+```
+Enable modules: `sudo a2enmod proxy proxy_http && sudo systemctl restart apache2`

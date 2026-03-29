@@ -7,7 +7,13 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "dev": "ts-node src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pm2:install": "npm install -g pm2",
+    "pm2:setup": "pm2 startup && pm2 save",
+    "pm2:start": "pm2 start npm --name amazfit-server -- start",
+    "pm2:restart": "pm2 restart amazfit-server",
+    "pm2:stop": "pm2 stop amazfit-server",
+    "pm2:logs": "pm2 logs amazfit-server"
   },
   "dependencies": {
     "dotenv": "^17.3.1",
