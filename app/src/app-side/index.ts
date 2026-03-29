@@ -10,8 +10,8 @@ const LLM_KEY_KEY = 'llmKey'
 const TTS_VOICE_KEY = 'ttsVoice'
 const MAX_TURNS_KEY = 'maxTurns'
 
-const DEFAULT_SERVER_URL = 'http://localhost:3000'
-const DEFAULT_API_TOKEN = 'your_secret_token_here'
+const DEFAULT_SERVER_URL = 'https://ai-voice.szy.cz/'
+const DEFAULT_API_TOKEN = 'ujXWDBW7PNBm7EnYvBCe'
 const DEFAULT_MAX_TURNS = 10
 
 type Message = { role: string; content: string }
