@@ -1,7 +1,7 @@
 import { spawnSync } from 'child_process';
 
 const GROQ_TTS_URL = 'https://api.groq.com/openai/v1/audio/speech';
-const DEFAULT_VOICE = 'troy';
+const DEFAULT_VOICE = 'daniel';
 const TTS_MODEL = 'canopylabs/orpheus-v1-english';
 
 const RATE = 16000;
@@ -23,7 +23,7 @@ export async function synthesizeSpeech(
       input: text,
       voice,
       response_format: 'wav',
-      speed: 1.5,
+      speed: 1.8,
     }),
   });
 
