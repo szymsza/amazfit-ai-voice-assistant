@@ -36,11 +36,12 @@ export async function synthesizeSpeech(
   return wavToMp3(wavBuffer);
 }
 
-/** Convert WAV to MP3 using ffmpeg (18kbps for good quality/size balance). */
+/** Convert WAV to MP3 using ffmpeg (18kbps, loudness-normalized to -9 LUFS for maximum perceived volume). */
 export function wavToMp3(wavBuffer: Buffer): Buffer {
   const result = spawnSync('ffmpeg', [
     '-v', 'error',
     '-i', 'pipe:0',
+    '-af', 'loudnorm=I=-9:TP=-1:LRA=5:linear=false',
     '-c:a', 'libmp3lame',
     '-b:a', '18k',
     '-f', 'mp3',

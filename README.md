@@ -22,32 +22,35 @@ server/       Node.js/Express backend
   .env.example  Config template
 ```
 
-## Build & run
+## Commands
 
-### Watch app (auto-compile TS on changes)
-```bash
-cd app && npm run watch
-```
+### Watch app (`cd app`)
 
-### Run in simulator
-```bash
-cd app && npm run dev   # compile + zeus dev
-```
+| Command | Description |
+|---|---|
+| `npm run watch` | Compile TS on changes (development) |
+| `npm run dev` | Compile + launch in Zeus simulator |
+| `npm run preview` | Compile + display a QR code to preview on a real device |
+| `npm run build` | Compile + Zeus build for device |
+| `npm run compile` | TypeScript → JS only (no Zeus) |
+| `npm run typecheck` | Type-check without emitting |
 
-### Build for device
-```bash
-cd app && npm run build   # compile + zeus build
-```
+### Server (`cd server`)
 
-### Run server (development)
-```bash
-cd server && npm run dev   # ts-node, no build step
-```
-
-### Run server (production)
-```bash
-cd server && npm run build && npm start
-```
+| Command | Description |
+|---|---|
+| `npm run dev` | Run with ts-node, no build step (development) |
+| `npm run build` | Compile TypeScript → `dist/` |
+| `npm start` | Run compiled `dist/index.js` |
+| `npm run typecheck` | Type-check without emitting |
+| `npm run deploy` | Build and start or restart the PM2 instance |
+| `npm run logs:clear` | Delete all log files and audio recordings in `logs/` |
+| `npm run pm2:install` | Install PM2 globally (one-time setup) |
+| `npm run pm2:setup` | Configure PM2 to auto-start on reboot (one-time setup) |
+| `npm run pm2:start` | Start server under PM2 |
+| `npm run pm2:restart` | Restart the running PM2 instance |
+| `npm run pm2:stop` | Stop the PM2 instance |
+| `npm run pm2:logs` | Stream PM2 logs |
 
 ## Server config
 
@@ -59,29 +62,17 @@ For simulator testing, update `DEFAULT_SERVER_URL` in `app/src/app-side/index.ts
 
 ## Deploying to VPS with PM2
 
-### Do once (one-time setup):
+### One-time setup:
 ```bash
-# Install PM2 globally
-cd server && npm run pm2:install
-
-# Make PM2 auto-start on VPS reboot
-npm run pm2:setup
+cd server
+npm run pm2:install   # install PM2 globally
+npm run pm2:setup     # configure auto-start on reboot
 ```
 
-### Regular commands:
+### Deploy / redeploy:
 ```bash
-# Build and start server
-cd server && npm run build && npm run pm2:start
-
-# Check logs
-npm run pm2:logs
-
-# Manage the server
-npm run pm2:restart   # restart the server
-npm run pm2:stop      # stop the server
+cd server && npm run deploy
 ```
-
-PM2 will automatically restart the server if it crashes and restore it on VPS reboot.
 
 ### VPS environment & proxy:
 Copy `server/.env.example` to `server/.env` and set `API_TOKEN` and `PORT` (use a unique port like 3001 to avoid conflicts). Then create an Apache VirtualHost to proxy requests:

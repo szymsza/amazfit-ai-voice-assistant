@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'amazfit',
+    name: 'amazfit-server',
     script: 'dist/index.js',
     exec_mode: 'cluster',
     instances: 1,
