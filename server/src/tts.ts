@@ -24,7 +24,7 @@ export async function synthesizeSpeech(
       input: text,
       voice,
       response_format: 'wav',
-      speed: 1.8,
+      speed: 2.1,
     }),
   });
 

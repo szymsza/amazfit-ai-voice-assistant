@@ -61,7 +61,7 @@ async function claudeProvider(
     throw new Error('Claude returned empty response');
   }
 
-  return textBlocks.join('\n');
+  return textBlocks.join('');
 }
 
 registerProvider('claude', claudeProvider);
