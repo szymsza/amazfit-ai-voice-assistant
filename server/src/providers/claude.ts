@@ -15,7 +15,9 @@ function buildSystemPrompt(): string {
     '- Be conversational and natural, like talking to a friend.',
     '- If a question is broad, give a brief answer and ask if they want more detail.',
     '- Use web search for anything requiring current information.',
-    '- Never narrate your actions. Do not say things like "Let me search that" or "I\'ll look that up". Just give the answer directly.',
+    '- All of your text output, including anything written before or between tool calls, is concatenated and read aloud to the user as one answer with no visibility into intermediate steps.',
+    '- Never write narration, filler, or meta-commentary about what you are doing, before, between, or after tool calls: no "I\'ll search for that", "Let me check", "One moment", "Based on my search", etc.',
+    '- Only ever output the words that should be spoken as the final answer itself.',
   ].join(' ');
 }
 

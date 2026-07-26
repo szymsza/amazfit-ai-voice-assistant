@@ -27,10 +27,12 @@ export const STATE_TEXT_STYLE = {
   enable: false,
 }
 
-/** Transcribed question text - shown during Playing/ReadingResponse states */
+export const QUESTION_ANSWER_GAP = px(10)
+
+/** Transcribed question text - shown during Playing/ReadingResponse states. Starts at vertical center (widest row of the round screen). */
 export const QUESTION_TEXT_STYLE = {
   x: px(20),
-  y: 30,
+  y: DEVICE_HEIGHT / 2,
   w: DEVICE_WIDTH - px(40),
   h: 165,
   color: 0xaaaaaa,
@@ -42,10 +44,10 @@ export const QUESTION_TEXT_STYLE = {
   enable: false,
 }
 
-/** AI response text - shown during Playing/ReadingResponse states; extends off screen for scrollability */
+/** AI response text - shown during Playing/ReadingResponse states; extends off screen for scrollability. y is a static fallback; index.page.ts repositions it below the question's actual measured height. */
 export const ANSWER_TEXT_STYLE = {
   x: px(20),
-  y: 205,
+  y: QUESTION_TEXT_STYLE.y + QUESTION_TEXT_STYLE.h + QUESTION_ANSWER_GAP,
   w: DEVICE_WIDTH - px(40),
   h: 700,
   color: 0xffffff,

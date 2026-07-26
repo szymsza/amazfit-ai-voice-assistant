@@ -227,7 +227,7 @@
         "Loading/status indicators during: recording, sending, waiting, playing",
         "Typecheck passes"
       ],
-      "priority": 15,
+      "priority": 3,
       "passes": true,
       "notes": "HUMAN CHECKPOINT: User must verify UI displays correctly on the watch (text rendering, scrolling, indicators)."
     },
@@ -245,7 +245,7 @@
         "App validates required keys are set before allowing voice queries",
         "Typecheck passes"
       ],
-      "priority": 16,
+      "priority": 4,
       "passes": false,
       "notes": "HUMAN CHECKPOINT: User must verify settings page works and values persist correctly."
     },
@@ -262,7 +262,7 @@
         "server/package.json (or root) has all server runtime dependencies listed so npm install works out of the box",
         "Typecheck passes"
       ],
-      "priority": 18,
+      "priority": 6,
       "passes": false,
       "notes": "HUMAN CHECKPOINT: User will replace the placeholder icon with the real one and fill in their server URL and API key in the README examples."
     },
@@ -276,7 +276,7 @@
         "Compare against Groq kimi-k2-instruct baseline (~0.42s)",
         "Results documented in project"
       ],
-      "priority": 17,
+      "priority": 7,
       "passes": false,
       "notes": "This requires API keys for OpenAI and Anthropic. Yield control to the user to provide keys and review results."
     },
@@ -291,7 +291,7 @@
         "Error state has a distinct visual style (e.g. red background or icon) to distinguish it from normal states",
         "Typecheck passes"
       ],
-      "priority": 19,
+      "priority": 5,
       "passes": false,
       "notes": "HUMAN CHECKPOINT: User must verify the error screen displays correctly and tap-to-dismiss works on the simulator/device."
     },
@@ -308,7 +308,7 @@
         "Code is readable: clear variable names, no overly clever one-liners",
         "Typecheck passes"
       ],
-      "priority": 21,
+      "priority": 12,
       "passes": false,
       "notes": "Run this story last — after all features are implemented — so refactoring does not conflict with in-progress feature work."
     },
@@ -323,9 +323,87 @@
         "Document findings and recommend an approach (or confirm base64/JSON is the pragmatic choice)",
         "If a viable approach is found, implement it on both Side Service and server"
       ],
-      "priority": 20,
+      "priority": 8,
       "passes": false,
       "notes": "Currently using JSON+base64 because Zepp OS fetch() does not support FormData multipart correctly. This spike should validate whether a more efficient transport is feasible."
+    },
+    {
+      "id": "US-022",
+      "title": "Bug fix: watch audio playback cuts off last few words",
+      "description": "As a user, the watch often cuts off the last few words of the AI response, making it hard to hear complete answers.",
+      "acceptanceCriteria": [
+        "Identify root cause: investigate whether the Player API stops playback prematurely or if the audio duration calculation is incorrect",
+        "Verify OPUS duration is correctly calculated before passing to Player API",
+        "Ensure Player API playback waits for the full audio buffer to play",
+        "Test with various response lengths (short, medium, long) on both simulator and real device",
+        "Confirm the last words are fully audible in playback",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "User-reported issue — playback cuts short. Likely issue is with Player API timing or OPUS buffer duration calculation."
+    },
+    {
+      "id": "US-023",
+      "title": "Watch UI - prevent screen sleep during interaction",
+      "description": "As a user, I want the watch screen to stay awake while I'm using the app so I can see the response and UI updates.",
+      "acceptanceCriteria": [
+        "Screen remains on while in Recording, Sending, Waiting, or Playing states",
+        "Screen is allowed to sleep only in Idle state after no interaction for a configurable timeout",
+        "Uses Zepp OS Display/Screen API or equivalent to prevent sleep",
+        "Does not drain battery excessively due to constant screen wake",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Standard watch UI/UX improvement — screen should not sleep while the app is actively in use."
+    },
+    {
+      "id": "US-024",
+      "title": "Optimize audio encoding — encode OPUS on watch before BLE transfer",
+      "description": "As a developer, I want to reduce BLE bandwidth and improve latency by encoding audio as OPUS on the watch side, not just the server side.",
+      "acceptanceCriteria": [
+        "Investigate Zepp OS audio encoding APIs (may not have native OPUS support)",
+        "If native OPUS encoding exists, refactor watch Recorder to output OPUS instead of raw PCM",
+        "Reduce audio payload size sent over BLE",
+        "Verify audio quality is maintained after watch-side encoding",
+        "Typecheck passes",
+        "If no native support, document the limitation in progress notes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Currently the watch captures raw PCM or uncompressed audio. If Zepp OS supports OPUS encoding, encoding on-device reduces BLE payload by ~80% before sending to Side Service."
+    },
+    {
+      "id": "US-025",
+      "title": "Optimize audio encoding — remove base64 encoding in Side Service",
+      "description": "As a developer, I want to eliminate base64 encoding overhead and send OPUS audio directly from Side Service to server.",
+      "acceptanceCriteria": [
+        "Refactor Side Service to send audio as binary in the request body instead of base64 JSON",
+        "Update server /api/ask endpoint to accept binary OPUS audio in body (Content-Type: application/octet-stream) alongside JSON config in query params or headers",
+        "Verify audio is decoded correctly on server side",
+        "Reduce request payload by ~33% (base64 overhead) and improve latency",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Currently sending JSON with base64-encoded audio (~33% overhead). If server can accept multipart or binary, eliminate JSON wrapping on the audio path."
+    },
+    {
+      "id": "US-026",
+      "title": "Optimize TTS audio — compress MP3 response and decompress on app side",
+      "description": "As a developer, I want to reduce the size of MP3/audio responses from the server by compressing them with a more efficient codec or compression, then decompressing on the app side.",
+      "acceptanceCriteria": [
+        "Investigate smaller audio formats or compression for TTS response (e.g., lower bitrate MP3, AAC, or custom codec)",
+        "Modify server TTS pipeline to output compressed audio instead of raw OPUS",
+        "Add decompression logic to Side Service to decompress audio before sending to watch",
+        "Measure payload reduction and latency impact",
+        "Verify audio quality is acceptable after compression/decompression",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "TTS response from server is currently full-bitrate OPUS. Opportunity to use lossy/lower-bitrate encoding to save bandwidth, with decompression on app side."
     }
   ]
 }

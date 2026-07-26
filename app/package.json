@@ -18,6 +18,6 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@zeppos/zml": "^0.0.38"
+    "@zeppos/zml": "^0.0.43"
   }
 }

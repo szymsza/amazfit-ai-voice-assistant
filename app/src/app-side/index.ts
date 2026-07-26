@@ -18,6 +18,7 @@ type Message = { role: string; content: string }
 
 type ServerResponse = {
   audio: string
+  audioSeconds: number
   question: string
   answer: string
   conversation: Message[]
@@ -46,10 +47,14 @@ function buildShakeResponse(shakeBuf: ZeppBuffer): ZeppBuffer {
   return resp
 }
 
+// Detect shake: flag=1 (byte 0), type=1 as uint16LE (bytes 2-3=0x01,0x00), min 16 bytes
+function isShakeFrame(buf: ZeppBuffer): boolean {
+  return buf.byteLength >= 16 && buf[0] === 1 && buf[2] === 1 && buf[3] === 0
+}
+
 function shakeMessageHandler(msg: unknown): void {
   const buf = Buffer.from(msg as ArrayBuffer)
-  // Detect shake: flag=1 (byte 0), type=1 as uint16LE (bytes 2-3=0x01,0x00), min 16 bytes
-  if (buf.byteLength >= 16 && buf[0] === 1 && buf[2] === 1 && buf[3] === 0) {
+  if (isShakeFrame(buf)) {
     console.log('[side] shake detected, sending response')
     const resp = buildShakeResponse(buf)
     messaging!.peerSocket.send(resp.buffer)
@@ -58,8 +63,36 @@ function shakeMessageHandler(msg: unknown): void {
 
 let shakeHandlerRegistered = false
 
+// ZML's own onMessage() assumes an already-parsed hmrpcv1 payload (66+ bytes) and
+// throws when it receives a raw 17-byte shake frame. Since shake frames and real
+// request frames both arrive through the same peerSocket 'message' event, patch
+// addListener so any listener other than our own filters shake frames out first.
+type AddListenerFn = ((event: string, callback: (msg: unknown) => void) => void) & {
+  __shakeFiltered?: boolean
+}
+
+function patchPeerSocketAddListener(): void {
+  const peerSocket = messaging?.peerSocket
+  if (!peerSocket) return
+  const current = peerSocket.addListener as AddListenerFn
+  if (current.__shakeFiltered) return
+  const original = current.bind(peerSocket)
+  const wrapped: AddListenerFn = (event, callback) => {
+    if (event !== 'message' || callback === shakeMessageHandler) {
+      return original(event, callback)
+    }
+    return original(event, (msg: unknown) => {
+      if (isShakeFrame(Buffer.from(msg as ArrayBuffer))) return
+      callback(msg)
+    })
+  }
+  wrapped.__shakeFiltered = true
+  peerSocket.addListener = wrapped
+}
+
 function registerShakeHandler(): void {
   if (!messaging?.peerSocket) return
+  patchPeerSocketAddListener()
   // Remove before adding to avoid duplicates across hot reloads
   messaging.peerSocket.removeListener('message', shakeMessageHandler)
   messaging.peerSocket.addListener('message', shakeMessageHandler)
@@ -141,11 +174,14 @@ try {
               data.audio.length,
             )
             // audio is already base64-encoded OPUS — pass directly to watch
-            res(null, JSON.stringify({ audio: data.audio, question: data.question, answer: data.answer }))
+            res(null, JSON.stringify({ audio: data.audio, audioSeconds: data.audioSeconds, question: data.question, answer: data.answer }))
           })
           .catch((err: unknown) => {
             console.error('[side] request failed:', String(err))
-            res(err)
+            // ZML only propagates res(err) as an error for JSON-RPC-shaped requests;
+            // ours is sent as a raw string, so that channel is silently dropped.
+            // Encode failure in the response body instead.
+            res(null, JSON.stringify({ error: String(err) }))
           })
       },
     })

@@ -6,6 +6,7 @@ const TTS_MODEL = 'canopylabs/orpheus-v1-english';
 
 const RATE = 16000;
 const CHANNELS = 1;
+const MP3_BITRATE_KBPS = 18;
 
 export async function synthesizeSpeech(
   text: string,
@@ -43,7 +44,7 @@ export function wavToMp3(wavBuffer: Buffer): Buffer {
     '-i', 'pipe:0',
     '-af', 'loudnorm=I=-9:TP=-1:LRA=5:linear=false',
     '-c:a', 'libmp3lame',
-    '-b:a', '18k',
+    '-b:a', `${MP3_BITRATE_KBPS}k`,
     '-f', 'mp3',
     'pipe:1',
   ], { input: wavBuffer, maxBuffer: 20 * 1024 * 1024 });
@@ -51,6 +52,11 @@ export function wavToMp3(wavBuffer: Buffer): Buffer {
   if (result.error) throw new Error(`ffmpeg spawn failed: ${result.error.message}`);
   if (result.status !== 0) throw new Error(`ffmpeg failed: ${result.stderr?.toString()}`);
   return result.stdout as Buffer;
+}
+
+/** CBR MP3 duration estimate: size (bits) / bitrate. Used to time the watch's answer-scroll animation. */
+export function estimateMp3DurationSeconds(mp3Buffer: Buffer): number {
+  return (mp3Buffer.length * 8) / (MP3_BITRATE_KBPS * 1000);
 }
 
 /**

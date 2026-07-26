@@ -3,7 +3,7 @@ import { writeFileSync } from 'fs';
 import express, { Request, Response } from 'express';
 import { transcribeAudio } from './stt';
 import { callLLM, type Message } from './llm';
-import { synthesizeSpeech } from './tts';
+import { synthesizeSpeech, estimateMp3DurationSeconds } from './tts';
 import { truncateForTts } from './utils';
 import { makeRequestId, trace, saveInput, saveOutput } from './logger';
 import './providers/groq';
@@ -95,6 +95,7 @@ app.post('/api/ask', (req: Request, res: Response) => {
             trace(reqDate, reqId, `Question: "${question}" | Answer: "${answer}"`);
             res.json({
               audio: mp3Buffer.toString('base64'),
+              audioSeconds: estimateMp3DurationSeconds(mp3Buffer),
               question,
               answer,
               conversation: updatedConversation,

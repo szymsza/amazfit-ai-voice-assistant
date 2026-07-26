@@ -1,6 +1,7 @@
 import * as hmUI from '@zos/ui'
 import { log as Logger } from '@zos/utils'
 import { scrollTo } from '@zos/page'
+import { setPageBrightTime, resetPageBrightTime } from '@zos/display'
 import { create, id as mediaId, codec as mediaCodec } from '@zos/media'
 import type { MediaInstance } from '@zos/media'
 import { openSync, readSync, writeSync, closeSync, statSync, O_RDONLY, O_RDWR, O_CREAT, O_TRUNC } from '@zos/fs'
@@ -14,6 +15,7 @@ import {
   STATE_TEXT_STYLE,
   QUESTION_TEXT_STYLE,
   ANSWER_TEXT_STYLE,
+  QUESTION_ANSWER_GAP,
 } from 'zosLoader:./index.page.[pf].layout.js'
 
 const logger = Logger.getLogger('ai-voice-assistant')
@@ -26,6 +28,7 @@ const enum AppState {
   Receiving = 'receiving',
   Playing = 'playing',
   ReadingResponse = 'reading',
+  Error = 'error',
 }
 
 const STATE_LABELS: Record<AppState, string> = {
@@ -36,6 +39,7 @@ const STATE_LABELS: Record<AppState, string> = {
   [AppState.Receiving]: 'Crafting the response...',
   [AppState.Playing]: 'Your response',
   [AppState.ReadingResponse]: '',
+  [AppState.Error]: '',
 }
 
 const BTN_COLORS: Record<AppState, number> = {
@@ -46,6 +50,7 @@ const BTN_COLORS: Record<AppState, number> = {
   [AppState.Receiving]: 0x4caf50,
   [AppState.Playing]: 0x000000,
   [AppState.ReadingResponse]: 0x000000,
+  [AppState.Error]: 0x990000,
 }
 
 // data:// paths used by Recorder/Player APIs
@@ -69,6 +74,11 @@ let questionTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
 let answerTextWidget: ReturnType<typeof hmUI.createWidget> | null = null
 let questionText = ''
 let answerText = ''
+let requestsMade = 0
+
+const REQUEST_TIMEOUT_MS = 30 * 1000
+const SCROLL_EXTRA_SECONDS = 2
+const DEFAULT_AUDIO_SECONDS = 5 // used if the server doesn't send audioSeconds
 
 function drawBackground(color: number): void {
   if (!canvasWidget) return
@@ -78,7 +88,12 @@ function drawBackground(color: number): void {
 
 function setState(newState: AppState): void {
   appState = newState
-  const showText = newState === AppState.Playing || newState === AppState.ReadingResponse
+  if (newState === AppState.Idle) {
+    resetPageBrightTime()
+  } else {
+    setPageBrightTime({ brightTime: 2 * 60 * 1000 })
+  }
+  const showText = newState === AppState.Playing || newState === AppState.ReadingResponse || newState === AppState.Error
   if (showText) {
     stateTextWidget?.setProperty(hmUI.prop.TEXT, '')
     questionTextWidget?.setProperty(hmUI.prop.TEXT, questionText)
@@ -87,11 +102,50 @@ function setState(newState: AppState): void {
     answerTextWidget?.setProperty(hmUI.prop.VISIBLE, 1)
   } else {
     stateTextWidget?.setProperty(hmUI.prop.TEXT, STATE_LABELS[newState])
+    questionTextWidget?.setProperty(hmUI.prop.TEXT, '')
     questionTextWidget?.setProperty(hmUI.prop.VISIBLE, 0)
+    answerTextWidget?.setProperty(hmUI.prop.TEXT, '')
     answerTextWidget?.setProperty(hmUI.prop.VISIBLE, 0)
     scrollTo(0)
   }
   drawBackground(BTN_COLORS[newState])
+}
+
+function formatError(err: unknown): string {
+  if (err && typeof err === 'object') {
+    const e = err as { code?: unknown; message?: unknown; reason?: unknown }
+    const parts: string[] = []
+    if (e.code !== undefined) parts.push('code=' + String(e.code))
+    const msg = e.message ?? e.reason
+    if (msg !== undefined) parts.push(String(msg))
+    if (parts.length) return parts.join(' ')
+  }
+  return String(err)
+}
+
+// Positions the answer widget right below the question's actual rendered
+// height (or at the question's own y if there's no question, e.g. errors).
+function repositionAnswerWidget(): number {
+  let answerY = QUESTION_TEXT_STYLE.y
+  if (questionText) {
+    const questionLayout = hmUI.getTextLayout(questionText, {
+      text_size: QUESTION_TEXT_STYLE.text_size,
+      text_width: QUESTION_TEXT_STYLE.w,
+      wrapped: 1,
+    })
+    answerY += questionLayout.height + QUESTION_ANSWER_GAP
+  }
+  answerTextWidget?.setProperty(hmUI.prop.Y, answerY)
+  return answerY
+}
+
+function showError(message: string): void {
+  logger.error('showing error: ' + message)
+  questionText = ''
+  answerText = message
+  setState(AppState.Error)
+  repositionAnswerWidget()
+  scrollTo(0)
 }
 
 function initMediaInstances(): void {
@@ -113,8 +167,7 @@ function initMediaInstances(): void {
       logger.debug('prepare succeeded, calling start()')
       player!.start()
     } else {
-      logger.error('prepare failed (result=' + String(result) + '), going idle')
-      setState(AppState.Idle)
+      showError('Playback failed to prepare (result=' + String(result) + ')')
     }
   })
 
@@ -125,10 +178,42 @@ function initMediaInstances(): void {
   })
 }
 
-function startPlayback(fileName: string): void {
+const SCROLL_STEP_MS = 100
+
+// scrollTo's animConfig isn't honored on-device (jumps straight to target), so
+// animate manually with stepped scrollTo(y) calls instead.
+function animateScrollTo(targetY: number, durationMs: number): void {
+  if (targetY === 0 || durationMs <= 0) return
+  const totalSteps = Math.max(1, Math.round(durationMs / SCROLL_STEP_MS))
+  let step = 0
+  const timer = setInterval(() => {
+    step++
+    scrollTo(Math.round((targetY * step) / totalSteps))
+    if (step >= totalSteps) clearInterval(timer)
+  }, SCROLL_STEP_MS)
+}
+
+// Positions the answer text right below the question's actual rendered height,
+// then animates scrolling so the answer's bottom reaches screen center by the
+// time the audio (+ a couple extra seconds) finishes playing.
+function layoutAndScheduleScroll(audioSeconds: number): void {
+  const answerY = repositionAnswerWidget()
+
+  const answerLayout = hmUI.getTextLayout(answerText, {
+    text_size: ANSWER_TEXT_STYLE.text_size,
+    text_width: ANSWER_TEXT_STYLE.w,
+    wrapped: 1,
+  })
+  const answerBottom = answerY + answerLayout.height
+  const targetScrollY = Math.min(0, DEVICE_HEIGHT / 2 - answerBottom)
+  const durationMs = (audioSeconds + SCROLL_EXTRA_SECONDS) * 1000
+
+  animateScrollTo(targetScrollY, durationMs)
+}
+
+function startPlayback(fileName: string, audioSeconds: number): void {
   if (!player) {
-    logger.error('player not initialized')
-    setState(AppState.Idle)
+    showError('Player not initialized')
     return
   }
   logger.debug('startPlayback: ' + fileName)
@@ -138,7 +223,22 @@ function startPlayback(fileName: string): void {
   logger.debug('prepare() called, result=' + String(prepareResult))
   prepareReceived = false
   setState(AppState.Playing)
+  layoutAndScheduleScroll(audioSeconds)
   setTimeout(() => { if (appState === AppState.Playing && !prepareReceived) { logger.warn('playback watchdog fired: no PREPARE event, assuming simulator'); setState(AppState.Idle) } }, 500)
+}
+
+// writeSync's Result is the number of bytes actually written, same contract as
+// POSIX write() — a single call isn't guaranteed to write the whole buffer.
+function writeFully(fd: number, buffer: ArrayBuffer): void {
+  const total = buffer.byteLength
+  let written = 0
+  while (written < total) {
+    const n = writeSync({ fd, buffer, options: { offset: written, length: total - written } })
+    if (!n || n <= 0) {
+      throw new Error('writeSync wrote ' + n + ' bytes (written=' + written + '/' + total + ')')
+    }
+    written += n
+  }
 }
 
 function sendToSideService(): void {
@@ -160,22 +260,55 @@ function sendToSideService(): void {
 
   logger.debug('sending audio, size=' + audioBuffer.byteLength)
   const b64Audio = arrayBufferToBase64(audioBuffer)
+  sendRequest(b64Audio, false)
+}
+
+function sendRequest(b64Audio: string, isRetry: boolean): void {
+  const requestNo = ++requestsMade
+
+  function fail(message: string): void {
+    if (isRetry) {
+      showError(message)
+    } else {
+      logger.warn('request failed, retrying once: ' + message)
+      sendRequest(b64Audio, true)
+    }
+  }
+
+  const watchdog = setTimeout(() => {
+    if (requestNo !== requestsMade) return
+    fail('Request timed out (' + (REQUEST_TIMEOUT_MS / 1000) + 's)')
+  }, REQUEST_TIMEOUT_MS)
+
   requestFn!(b64Audio as unknown as ArrayBuffer)
     .then((responseData: unknown) => {
+      clearTimeout(watchdog)
+      if (requestNo !== requestsMade) return
+      const resp = JSON.parse(responseData as string) as {
+        error?: string
+        audio: string
+        audioSeconds: number
+        question: string
+        answer: string
+      }
+      if (resp.error) {
+        fail('Server error: ' + resp.error)
+        return
+      }
       setState(AppState.Receiving)
-      const resp = JSON.parse(responseData as string) as { audio: string; question: string; answer: string }
       questionText = resp.question ?? ''
       answerText = resp.answer ?? ''
       const ab = base64ToArrayBuffer(resp.audio)
       logger.debug('got response, size=' + ab.byteLength)
       const wfd = openSync({ path: RESPONSE_FILE, flag: O_RDWR | O_CREAT | O_TRUNC })
-      writeSync({ fd: wfd, buffer: ab })
+      writeFully(wfd, ab)
       closeSync({ fd: wfd })
-      startPlayback(RESPONSE_PATH)
+      startPlayback(RESPONSE_PATH, resp.audioSeconds ?? DEFAULT_AUDIO_SECONDS)
     })
     .catch((err: unknown) => {
-      logger.error('request failed: ' + String(err))
-      setState(AppState.Idle)
+      clearTimeout(watchdog)
+      if (requestNo !== requestsMade) return
+      fail('Request failed: ' + formatError(err))
     })
 }
 
@@ -190,8 +323,7 @@ function stopRecording(): void {
 
 function startRecording(): void {
   if (!recorder) {
-    logger.error('recorder not initialized')
-    setState(AppState.Idle)
+    showError('Recorder not initialized')
     return
   }
   try {
@@ -205,13 +337,12 @@ function startRecording(): void {
     setState(AppState.Recording)
     logger.debug('recording started')
   } catch (e) {
-    logger.error('recorder start failed: ' + String(e))
-    setState(AppState.Idle)
+    showError('Recording failed to start: ' + formatError(e))
   }
 }
 
 function onButtonPress(): void {
-  if (appState === AppState.Idle || appState === AppState.ReadingResponse) {
+  if (appState === AppState.Idle || appState === AppState.ReadingResponse || appState === AppState.Error) {
     questionText = ''
     answerText = ''
     startRecording()
@@ -239,11 +370,12 @@ Page(BasePage({
     canvasWidget = hmUI.createWidget(hmUI.widget.CANVAS, CANVAS_STYLE)
     drawBackground(BTN_COLORS[AppState.Idle])
     canvasWidget.addEventListener(hmUI.event.CLICK_UP, onButtonPress)
-    stateTextWidget = hmUI.createWidget(hmUI.widget.TEXT, STATE_TEXT_STYLE)
+    // Created before stateTextWidget so the state label always renders on top of them.
     questionTextWidget = hmUI.createWidget(hmUI.widget.TEXT, QUESTION_TEXT_STYLE)
     questionTextWidget.setProperty(hmUI.prop.VISIBLE, 0)
     answerTextWidget = hmUI.createWidget(hmUI.widget.TEXT, ANSWER_TEXT_STYLE)
     answerTextWidget.setProperty(hmUI.prop.VISIBLE, 0)
+    stateTextWidget = hmUI.createWidget(hmUI.widget.TEXT, STATE_TEXT_STYLE)
   },
 
   onDestroy() {
@@ -266,5 +398,6 @@ Page(BasePage({
     canvasWidget = null
     requestFn = null
     appState = AppState.Idle
+    requestsMade++
   },
 }))
