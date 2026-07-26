@@ -7,7 +7,7 @@ const TTS_MODEL = 'canopylabs/orpheus-v1-english';
 const RATE = 16000;
 const CHANNELS = 1;
 const MP3_BITRATE_KBPS = 32; // minimum standard MP3 bitrate; lower values get silently rounded up to this
-const PLAYBACK_SPEED = 1.4; // applied via ffmpeg atempo; Groq's own speed param is a near no-op on Orpheus
+const PLAYBACK_SPEED = 1.3; // applied via ffmpeg atempo; Groq's own speed param is a near no-op on Orpheus
 
 export async function synthesizeSpeech(
   text: string,
