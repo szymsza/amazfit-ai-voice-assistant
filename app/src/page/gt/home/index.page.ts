@@ -77,7 +77,7 @@ let answerText = ''
 let requestsMade = 0
 
 const REQUEST_TIMEOUT_MS = 30 * 1000
-const SCROLL_EXTRA_SECONDS = 2
+const SCROLL_EXTRA_SECONDS = 1
 const DEFAULT_AUDIO_SECONDS = 5 // used if the server doesn't send audioSeconds
 
 function drawBackground(color: number): void {

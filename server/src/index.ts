@@ -93,7 +93,7 @@ app.post('/api/ask', (req: Request, res: Response) => {
             trace(reqDate, reqId, `TTS -> ${mp3Buffer.length}b MP3`);
             try { writeFileSync('/tmp/debug_tts_output.bin', mp3Buffer); } catch (_) { /* ignore */ }
             saveOutput(reqDate, reqId, mp3Buffer);
-            trace(reqDate, reqId, `Question: "${question}" | Answer (${audioSeconds.toFixed(2)}s): "${answer}"`);
+            trace(reqDate, reqId, `Question: "${question}" | Answer: "${answer}"`);
             res.json({
               audio: mp3Buffer.toString('base64'),
               audioSeconds,
