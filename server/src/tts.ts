@@ -6,7 +6,7 @@ const TTS_MODEL = 'canopylabs/orpheus-v1-english';
 
 const RATE = 16000;
 const CHANNELS = 1;
-const MP3_BITRATE_KBPS = 18;
+const MP3_BITRATE_KBPS = 32; // minimum standard MP3 bitrate; lower values get silently rounded up to this
 
 export async function synthesizeSpeech(
   text: string,
@@ -37,7 +37,7 @@ export async function synthesizeSpeech(
   return wavToMp3(wavBuffer);
 }
 
-/** Convert WAV to MP3 using ffmpeg (18kbps, loudness-normalized to -9 LUFS for maximum perceived volume). */
+/** Convert WAV to MP3 using ffmpeg (32kbps, loudness-normalized to -9 LUFS for maximum perceived volume). */
 export function wavToMp3(wavBuffer: Buffer): Buffer {
   const result = spawnSync('ffmpeg', [
     '-v', 'error',
